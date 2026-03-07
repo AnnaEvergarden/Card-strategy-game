@@ -1,0 +1,31 @@
+[Libraries]
+[Ll]ibrary/
+
+[Tt]emp/
+[Tt]emp/*
+[Ll]ogs/
+UserSettings/
+
+# Unity auto generated
+Obj/
+Build/
+Builds/
+
+# Visual Studio
+.vs/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+
+# Rider
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
