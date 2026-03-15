@@ -26,6 +26,15 @@ public class CardInstance
         enhanceHealthBonus = 0;
     }
 
+    public  CardInstance(CardData _cardData)
+    {
+        instanceId = Guid.NewGuid().ToString();
+        this.cardId = _cardData.cardId;
+        enhanceLevel = 0;
+        enhanceAttackBonus = 0;
+        enhanceHealthBonus = 0;
+    }
+
     public static CardInstance CreateNew(string _cardId)
     {
         return new CardInstance(_cardId);

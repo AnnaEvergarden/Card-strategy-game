@@ -1,9 +1,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
-public class CardStatsService
+public class CardStatsService : Singleton<CardStatsService>
 {
+    protected override bool PersistAcrossScenes => false;
+
     /// <summary>
     /// 战斗用于战斗的攻击力。
     /// </summary>

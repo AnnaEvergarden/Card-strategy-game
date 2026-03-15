@@ -1,0 +1,71 @@
+---
+description: 修改或添加脚本时生成/更新脚本结构图，含分层结构与各脚本、文件夹功能介绍
+globs: Assets/Scripts/**/*.cs
+alwaysApply: false
+---
+
+# 脚本结构图维护
+
+## 触发条件
+
+在**修改**或**添加** `Assets/Scripts/` 下任意脚本（.cs）后，必须**生成或更新**项目中的脚本结构图文档。
+
+## 文档位置与命名
+
+- 路径：`Documentation/脚本结构图.md`
+- 若不存在则新建，若已存在则在本次修改后更新该文件。
+
+## 文档内容要求
+
+### 1. 分层结构清晰
+
+- 用层级形式展示目录与脚本（例如树形或标题层级），能一眼看出「层」的划分，例如：
+  - **入口/启动层**（如 Services 下的 GameBootstrap）
+  - **核心逻辑层**（如 Core：卡牌、战斗）
+  - **服务/数据层**（如 SaveManager、SaveData）
+  - 其他项目实际存在的分层
+- 分层名称可按当前项目约定调整，但必须体现「从上到下」或「从外到内」的依赖关系。
+
+### 2. 每个文件夹的功能介绍
+
+- 对 `Assets/Scripts/` 下每个**文件夹**（如 Core、Services、Core/Card、Core/Battle）用一两句话说明该文件夹的职责、在整体中的角色。
+
+### 3. 每个脚本的功能介绍
+
+- 对每个 **.cs** 脚本列出：
+  - 文件名（或类名）
+  - 一句话功能说明
+  - 若有助于理解分层，可简短注明「依赖谁 / 被谁使用」（可选）。
+
+### 4. 推荐结构示例
+
+```markdown
+# 脚本结构图
+
+## 分层概览
+
+（用列表或树形写出层级，例如：）
+- 启动层: Services/GameBootstrap
+- 核心层: Core/Card, Core/Battle
+- 数据/服务层: Services/SaveManager, SaveData
+
+## 目录与脚本说明
+
+### Assets/Scripts/
+（根目录职责说明）
+
+### Assets/Scripts/Core
+（Core 文件夹职责）
+
+#### Core/Card/CardData.cs
+（一句话功能）
+
+#### Core/Card/CardInstance.cs
+（一句话功能）
+...
+```
+
+## 执行时机
+
+- 完成本次对话中对任意 `Assets/Scripts/**/*.cs` 的**新增**或**修改**后，在回复用户前或回复中完成对 `Documentation/脚本结构图.md` 的生成或更新，并告知用户「已更新脚本结构图」。
+- 若本次对话未涉及脚本的增改，无需更新该文档。
