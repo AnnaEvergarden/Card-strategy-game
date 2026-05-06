@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 781b9b00128ab034b9a1e4d5837724c5, type: 3}
+  m_Name: LevelAreaDatabase
+  m_EditorClassIdentifier: 
+  permanentAreas:
+  - {fileID: 11400000, guid: 18c9f85ea7609134eb5c3cc7714a258c, type: 2}
+  - {fileID: 11400000, guid: 211b8c3c7db1a4941a0700d02de382d6, type: 2}
+  - {fileID: 11400000, guid: e2d19ca2037f937409e056eb968c6946, type: 2}
+  - {fileID: 11400000, guid: ccac81025476c524184bb6c7a8dadc88, type: 2}
+  - {fileID: 11400000, guid: ec49ff978fc31444dbb7c9aaf0b4a892, type: 2}
+  activityAreas:
+  - {fileID: 11400000, guid: b13bb72b0c5503548bf6db1a1edacec5, type: 2}

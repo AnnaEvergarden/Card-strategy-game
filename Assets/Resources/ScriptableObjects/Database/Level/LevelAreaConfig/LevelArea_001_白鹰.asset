@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e27e3da6ad2642849b83c7db9aef7d6a, type: 3}
+  m_Name: "LevelArea_001_\u767D\u9E70"
+  m_EditorClassIdentifier: 
+  areaId: 001
+  displayName: "\u767D\u9E70"
+  description: 
+  isUnlocked: 1
+  stages:
+  - {fileID: 11400000, guid: 7a552330b7518c54d9e72b0ee22422bd, type: 2}
+  - {fileID: 11400000, guid: 4476610d383dc8841a41d0c9b18ff9dd, type: 2}
+  - {fileID: 11400000, guid: ef0eb342685532c438018a10aeaf4205, type: 2}
+  - {fileID: 11400000, guid: 0378356c91a806041ae78e69ca50193e, type: 2}

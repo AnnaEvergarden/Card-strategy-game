@@ -1,0 +1,18 @@
+{
+  "list": [
+    {
+      "id": 1,
+      "icon": "",
+      "itemName": "红药水",
+      "description": "这是一瓶红药水",
+      "type": "Consumable"
+    },
+    {
+      "id": 2,
+      "icon": "",
+      "itemName": "蓝药水",
+      "description": "这是一瓶蓝药水",
+      "type": "Consumable"
+    }
+  ]
+}

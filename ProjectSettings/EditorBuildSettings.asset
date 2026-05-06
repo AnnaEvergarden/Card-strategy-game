@@ -9,15 +9,20 @@ EditorBuildSettings:
     path: Assets/Scenes/TitleScene.scene
     guid: 2cda990e2423bbf4892e6590ba056729
   - enabled: 1
-    path: Assets/Scenes/GameScene.scene
+    path: Assets/Scenes/BattleScene.scene
     guid: b4875b17b66dc2f40b2597947e6a2d00
+  - enabled: 1
+    path: Assets/Scenes/GameScene.scene
+    guid: 3219d5f6a38e7ec4081bf1e92ef258db
   m_BuildProfiles: []
   m_configObjects: {}
   m_SlimFeaturesWeixinMiniGame:
+    ACLDecompression: 0
     AllocateOverhead: 1
     DecompressASTC: 0
     DecompressDXT: 1
     DecompressETC: 1
     FreeTypeSfntPng: 1
     LightProbe: 2
+    RootMotion: 0
     UseStringInternPool: 2

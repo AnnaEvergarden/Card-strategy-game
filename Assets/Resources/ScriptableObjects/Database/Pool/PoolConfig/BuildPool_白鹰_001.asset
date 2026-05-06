@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8e7d6c5b4a392817065544332211009, type: 3}
+  m_Name: "BuildPool_\u767D\u9E70_001"
+  m_EditorClassIdentifier: 
+  poolId: 001
+  displayName: "\u767D\u9E70"
+  poolFaction: 5
+  poolBannerSprite: {fileID: 0}
+  buildOneCost:
+    gold: 0
+    diamond: 0
+    shipTicket: 0
+  buildTenCost:
+    gold: 0
+    diamond: 0
+    shipTicket: 0
+  dropEntries:
+  - card: {fileID: 11400000, guid: 853dde9a4fa77ec46bf21892b9a65069, type: 2}
+    weight: 10
+  - card: {fileID: 11400000, guid: a91d7f6006317e941929a298bda5f10d, type: 2}
+    weight: 10
+  - card: {fileID: 11400000, guid: 4b957c43933f6444785401943a65d9fd, type: 2}
+    weight: 10
+  - card: {fileID: 11400000, guid: 21e9d9a03fd6ff94480dcacc4cd2bafd, type: 2}
+    weight: 10
+  - card: {fileID: 11400000, guid: 53bbd0c9e4042c44abc456a1062df6cd, type: 2}
+    weight: 5
