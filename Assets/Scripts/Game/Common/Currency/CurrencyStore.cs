@@ -186,6 +186,12 @@ public static class CurrencyStore
         lock (FileLock)
         {
             var data = Load();
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Consume currency blocked: current data was not loaded safely.");
+                return false;
+            }
+
             if (data.gold < gold || data.diamond < diamond || data.shipTicket < shipTicket)
             {
                 return false;
@@ -207,6 +213,12 @@ public static class CurrencyStore
         lock (FileLock)
         {
             var data = Load();
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Add currency blocked: current data was not loaded safely.");
+                return;
+            }
+
             if (gold > 0) data.gold += gold;
             if (diamond > 0) data.diamond += diamond;
             if (shipTicket > 0) data.shipTicket += shipTicket;

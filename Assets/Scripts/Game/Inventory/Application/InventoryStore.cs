@@ -202,6 +202,12 @@ public static class InventoryStore
         lock (FileLock)
         {
             Load();
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Add inventory item blocked: current data was not loaded safely.");
+                return;
+            }
+
             _cachedData.items ??= new List<InventoryItemData>();
             var id = itemId.Trim();
             for (var i = 0; i < _cachedData.items.Count; i++)
@@ -244,6 +250,12 @@ public static class InventoryStore
         lock (FileLock)
         {
             Load();
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Consume inventory item blocked: current data was not loaded safely.");
+                return false;
+            }
+
             _cachedData.items ??= new List<InventoryItemData>();
             var id = itemId.Trim();
             for (var i = 0; i < _cachedData.items.Count; i++)
@@ -287,6 +299,12 @@ public static class InventoryStore
         lock (FileLock)
         {
             Load();
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Remove inventory item blocked: current data was not loaded safely.");
+                return false;
+            }
+
             _cachedData.items ??= new List<InventoryItemData>();
             var id = itemId.Trim();
             for (var i = 0; i < _cachedData.items.Count; i++)

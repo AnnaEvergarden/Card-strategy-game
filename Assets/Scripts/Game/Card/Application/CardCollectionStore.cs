@@ -197,6 +197,12 @@ public static class CardCollectionStore
         lock (FileLock)
         {
             Load();
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Add card collection blocked: current data was not loaded safely.");
+                return;
+            }
+
             _cached.cards ??= new List<CardEntry>();
             var id = cardId.Trim();
             for (var i = 0; i < _cached.cards.Count; i++)
@@ -229,6 +235,12 @@ public static class CardCollectionStore
         lock (FileLock)
         {
             Load();
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Consume card collection blocked: current data was not loaded safely.");
+                return false;
+            }
+
             _cached.cards ??= new List<CardEntry>();
             var id = cardId.Trim();
             for (var i = 0; i < _cached.cards.Count; i++)
@@ -272,6 +284,12 @@ public static class CardCollectionStore
         lock (FileLock)
         {
             Load();
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Remove card collection blocked: current data was not loaded safely.");
+                return false;
+            }
+
             _cached.cards ??= new List<CardEntry>();
             var id = cardId.Trim();
             for (var i = 0; i < _cached.cards.Count; i++)
