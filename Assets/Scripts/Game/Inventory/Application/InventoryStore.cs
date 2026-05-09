@@ -27,6 +27,16 @@ public static class InventoryStore
     private static InventoryData _cachedData = new();
 
     /// <summary>
+    /// 是否已经从磁盘加载过或通过保存建立过可信缓存。
+    /// </summary>
+    private static bool _hasCachedData;
+
+    /// <summary>
+    /// 最近一次加载是否失败；失败后禁止自动保存覆盖原文件。
+    /// </summary>
+    private static bool _saveBlockedByLoadFailure;
+
+    /// <summary>
     /// 文件读写锁。
     /// </summary>
     private static readonly object FileLock = new();
@@ -90,6 +100,7 @@ public static class InventoryStore
                     if (bytes == null || bytes.Length <= 16)
                     {
                         _cachedData = new InventoryData();
+                        MarkLoadFailure();
                         return _cachedData;
                     }
 
@@ -97,21 +108,25 @@ public static class InventoryStore
                     if (string.IsNullOrWhiteSpace(json))
                     {
                         _cachedData = new InventoryData();
+                        MarkLoadFailure();
                         return _cachedData;
                     }
 
                     var data = JsonUtility.FromJson<InventoryData>(json);
                     _cachedData = data ?? new InventoryData();
+                    MarkCacheReadyForSave();
                     return _cachedData;
                 }
 
                 _cachedData = new InventoryData();
+                MarkCacheReadyForSave();
                 return _cachedData;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Load inventory failed: {ex.Message}");
                 _cachedData = new InventoryData();
+                MarkLoadFailure();
                 return _cachedData;
             }
         }
@@ -126,6 +141,12 @@ public static class InventoryStore
         {
             try
             {
+                if (_saveBlockedByLoadFailure)
+                {
+                    Debug.LogError("Save inventory blocked: last load failed, refusing to overwrite existing data.");
+                    return;
+                }
+
                 var folder = GetDataFolderPath();
                 if (!Directory.Exists(folder))
                 {
@@ -136,6 +157,7 @@ public static class InventoryStore
                 var json = JsonUtility.ToJson(_cachedData, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
                 File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                MarkCacheReadyForSave();
             }
             catch (Exception ex)
             {
@@ -149,6 +171,21 @@ public static class InventoryStore
     /// </summary>
     public static void SaveCurrent()
     {
+        lock (FileLock)
+        {
+            if (!_hasCachedData)
+            {
+                // 自动保存前先加载磁盘数据，避免用静态初始空对象覆盖真实仓库。
+                Load();
+            }
+
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Save current inventory skipped: cached data came from a failed load.");
+                return;
+            }
+        }
+
         Save(_cachedData ?? new InventoryData());
     }
 
@@ -165,6 +202,12 @@ public static class InventoryStore
         lock (FileLock)
         {
             Load();
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Add inventory item blocked: current data was not loaded safely.");
+                return;
+            }
+
             _cachedData.items ??= new List<InventoryItemData>();
             var id = itemId.Trim();
             for (var i = 0; i < _cachedData.items.Count; i++)
@@ -207,6 +250,12 @@ public static class InventoryStore
         lock (FileLock)
         {
             Load();
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Consume inventory item blocked: current data was not loaded safely.");
+                return false;
+            }
+
             _cachedData.items ??= new List<InventoryItemData>();
             var id = itemId.Trim();
             for (var i = 0; i < _cachedData.items.Count; i++)
@@ -250,6 +299,12 @@ public static class InventoryStore
         lock (FileLock)
         {
             Load();
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Remove inventory item blocked: current data was not loaded safely.");
+                return false;
+            }
+
             _cachedData.items ??= new List<InventoryItemData>();
             var id = itemId.Trim();
             for (var i = 0; i < _cachedData.items.Count; i++)
@@ -282,7 +337,28 @@ public static class InventoryStore
         return Path.Combine(gameRootPath, DataFolderName);
     }
 
+    /// <summary>
+    /// 获取仓库加密文件完整路径。
+    /// </summary>
     private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+
+    /// <summary>
+    /// 标记当前缓存已经可信，可被后续自动保存写回。
+    /// </summary>
+    private static void MarkCacheReadyForSave()
+    {
+        _hasCachedData = true;
+        _saveBlockedByLoadFailure = false;
+    }
+
+    /// <summary>
+    /// 标记加载失败，后续自动保存必须跳过以保护原始文件。
+    /// </summary>
+    private static void MarkLoadFailure()
+    {
+        _hasCachedData = true;
+        _saveBlockedByLoadFailure = true;
+    }
 
     #endregion
 }

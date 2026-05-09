@@ -26,6 +26,16 @@ public static class CurrencyStore
     private static CurrencyData _cached = new();
 
     /// <summary>
+    /// 是否已经从磁盘加载过或通过保存建立过可信缓存。
+    /// </summary>
+    private static bool _hasCachedData;
+
+    /// <summary>
+    /// 最近一次加载是否失败；失败后禁止自动保存覆盖原文件。
+    /// </summary>
+    private static bool _saveBlockedByLoadFailure;
+
+    /// <summary>
     /// 文件读写锁。
     /// </summary>
     private static readonly object FileLock = new();
@@ -80,18 +90,26 @@ public static class CurrencyStore
                         {
                             _cached = JsonUtility.FromJson<CurrencyData>(json) ?? CreateDefault();
                             Normalize(_cached);
+                            MarkCacheReadyForSave();
                             return _cached;
                         }
                     }
+
+                    Debug.LogWarning($"Load currency failed: encrypted file is invalid => {path}");
+                    _cached = CreateDefault();
+                    MarkLoadFailure();
+                    return _cached;
                 }
 
                 _cached = CreateDefault();
+                MarkCacheReadyForSave();
                 return _cached;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Load currency failed: {ex.Message}");
                 _cached = CreateDefault();
+                MarkLoadFailure();
                 return _cached;
             }
         }
@@ -106,6 +124,12 @@ public static class CurrencyStore
         {
             try
             {
+                if (_saveBlockedByLoadFailure)
+                {
+                    Debug.LogError("Save currency blocked: last load failed, refusing to overwrite existing data.");
+                    return;
+                }
+
                 var folder = GetDataFolderPath();
                 if (!Directory.Exists(folder))
                 {
@@ -117,6 +141,7 @@ public static class CurrencyStore
                 var json = JsonUtility.ToJson(_cached, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
                 File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                MarkCacheReadyForSave();
             }
             catch (Exception ex)
             {
@@ -130,6 +155,21 @@ public static class CurrencyStore
     /// </summary>
     public static void SaveCurrent()
     {
+        lock (FileLock)
+        {
+            if (!_hasCachedData)
+            {
+                // 自动保存前先加载磁盘数据，避免用静态初始空对象覆盖真实存档。
+                Load();
+            }
+
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Save current currency skipped: cached data came from a failed load.");
+                return;
+            }
+        }
+
         Save(_cached ?? CreateDefault());
     }
 
@@ -146,6 +186,12 @@ public static class CurrencyStore
         lock (FileLock)
         {
             var data = Load();
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Consume currency blocked: current data was not loaded safely.");
+                return false;
+            }
+
             if (data.gold < gold || data.diamond < diamond || data.shipTicket < shipTicket)
             {
                 return false;
@@ -167,6 +213,12 @@ public static class CurrencyStore
         lock (FileLock)
         {
             var data = Load();
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Add currency blocked: current data was not loaded safely.");
+                return;
+            }
+
             if (gold > 0) data.gold += gold;
             if (diamond > 0) data.diamond += diamond;
             if (shipTicket > 0) data.shipTicket += shipTicket;
@@ -201,6 +253,27 @@ public static class CurrencyStore
         data.shipTicket = Mathf.Max(0, data.shipTicket);
     }
 
+    /// <summary>
+    /// 标记当前缓存已经可信，可被后续自动保存写回。
+    /// </summary>
+    private static void MarkCacheReadyForSave()
+    {
+        _hasCachedData = true;
+        _saveBlockedByLoadFailure = false;
+    }
+
+    /// <summary>
+    /// 标记加载失败，后续自动保存必须跳过以保护原始文件。
+    /// </summary>
+    private static void MarkLoadFailure()
+    {
+        _hasCachedData = true;
+        _saveBlockedByLoadFailure = true;
+    }
+
+    /// <summary>
+    /// 获取资源数据目录（游戏根目录/UserData）。
+    /// </summary>
     private static string GetDataFolderPath()
     {
         var dataPath = Application.dataPath;
@@ -213,6 +286,9 @@ public static class CurrencyStore
         return Path.Combine(gameRoot, DataFolderName);
     }
 
+    /// <summary>
+    /// 获取资源加密文件完整路径。
+    /// </summary>
     private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
 
     #endregion

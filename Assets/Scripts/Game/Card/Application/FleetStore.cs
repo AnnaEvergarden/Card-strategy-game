@@ -32,6 +32,16 @@ public static class FleetStore
     private static FleetData _cached = new();
 
     /// <summary>
+    /// 是否已经从磁盘加载过或通过保存建立过可信缓存。
+    /// </summary>
+    private static bool _hasCachedData;
+
+    /// <summary>
+    /// 最近一次加载是否失败；失败后禁止自动保存覆盖原文件。
+    /// </summary>
+    private static bool _saveBlockedByLoadFailure;
+
+    /// <summary>
     /// 文件读写锁。
     /// </summary>
     private static readonly object FileLock = new();
@@ -94,18 +104,26 @@ public static class FleetStore
                             var data = JsonUtility.FromJson<FleetData>(json);
                             _cached = data ?? new FleetData();
                             Normalize(_cached);
+                            MarkCacheReadyForSave();
                             return _cached;
                         }
                     }
+
+                    Debug.LogWarning($"Load fleet data failed: encrypted file is invalid => {encryptedPath}");
+                    _cached = CreateDefaultFromCollection();
+                    MarkLoadFailure();
+                    return _cached;
                 }
 
                 _cached = CreateDefaultFromCollection();
+                MarkCacheReadyForSave();
                 return _cached;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Load fleet data failed: {ex.Message}");
                 _cached = CreateDefaultFromCollection();
+                MarkLoadFailure();
                 return _cached;
             }
         }
@@ -120,6 +138,12 @@ public static class FleetStore
         {
             try
             {
+                if (_saveBlockedByLoadFailure)
+                {
+                    Debug.LogError("Save fleet data blocked: last load failed, refusing to overwrite existing data.");
+                    return;
+                }
+
                 var folder = GetDataFolderPath();
                 if (!Directory.Exists(folder))
                 {
@@ -131,6 +155,7 @@ public static class FleetStore
                 var json = JsonUtility.ToJson(_cached, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
                 File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                MarkCacheReadyForSave();
             }
             catch (Exception ex)
             {
@@ -144,6 +169,21 @@ public static class FleetStore
     /// </summary>
     public static void SaveCurrent()
     {
+        lock (FileLock)
+        {
+            if (!_hasCachedData)
+            {
+                // 自动保存前先加载磁盘数据，避免用静态初始空对象覆盖真实编队。
+                Load();
+            }
+
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Save current fleet data skipped: cached data came from a failed load.");
+                return;
+            }
+        }
+
         Save(_cached ?? new FleetData());
     }
 
@@ -213,6 +253,27 @@ public static class FleetStore
         return data;
     }
 
+    /// <summary>
+    /// 标记当前缓存已经可信，可被后续自动保存写回。
+    /// </summary>
+    private static void MarkCacheReadyForSave()
+    {
+        _hasCachedData = true;
+        _saveBlockedByLoadFailure = false;
+    }
+
+    /// <summary>
+    /// 标记加载失败，后续自动保存必须跳过以保护原始文件。
+    /// </summary>
+    private static void MarkLoadFailure()
+    {
+        _hasCachedData = true;
+        _saveBlockedByLoadFailure = true;
+    }
+
+    /// <summary>
+    /// 获取编队数据目录（游戏根目录/UserData）。
+    /// </summary>
     private static string GetDataFolderPath()
     {
         var dataPath = Application.dataPath;
@@ -225,6 +286,9 @@ public static class FleetStore
         return Path.Combine(gameRoot, DataFolderName);
     }
 
+    /// <summary>
+    /// 获取编队加密文件完整路径。
+    /// </summary>
     private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
 
     #endregion
