@@ -27,6 +27,16 @@ public static class CardCollectionStore
     private static CardCollectionData _cached = new();
 
     /// <summary>
+    /// 是否已经从磁盘加载过或通过保存建立过可信缓存。
+    /// </summary>
+    private static bool _hasCachedData;
+
+    /// <summary>
+    /// 最近一次加载是否失败；失败后禁止自动保存覆盖原文件。
+    /// </summary>
+    private static bool _saveBlockedByLoadFailure;
+
+    /// <summary>
     /// 文件读写锁。
     /// </summary>
     private static readonly object FileLock = new();
@@ -85,6 +95,7 @@ public static class CardCollectionStore
                     if (bytes == null || bytes.Length <= 16)
                     {
                         _cached = CreateDefaultIfNeeded();
+                        MarkLoadFailure();
                         return _cached;
                     }
 
@@ -92,21 +103,25 @@ public static class CardCollectionStore
                     if (string.IsNullOrWhiteSpace(json))
                     {
                         _cached = CreateDefaultIfNeeded();
+                        MarkLoadFailure();
                         return _cached;
                     }
 
                     var data = JsonUtility.FromJson<CardCollectionData>(json);
                     _cached = data ?? new CardCollectionData();
+                    MarkCacheReadyForSave();
                     return _cached;
                 }
 
                 _cached = CreateDefaultIfNeeded();
+                MarkCacheReadyForSave();
                 return _cached;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Load card collection failed: {ex.Message}");
                 _cached = new CardCollectionData();
+                MarkLoadFailure();
                 return _cached;
             }
         }
@@ -121,6 +136,12 @@ public static class CardCollectionStore
         {
             try
             {
+                if (_saveBlockedByLoadFailure)
+                {
+                    Debug.LogError("Save card collection blocked: last load failed, refusing to overwrite existing data.");
+                    return;
+                }
+
                 var folder = GetDataFolderPath();
                 if (!Directory.Exists(folder))
                 {
@@ -131,6 +152,7 @@ public static class CardCollectionStore
                 var json = JsonUtility.ToJson(_cached, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
                 File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                MarkCacheReadyForSave();
             }
             catch (Exception ex)
             {
@@ -144,6 +166,21 @@ public static class CardCollectionStore
     /// </summary>
     public static void SaveCurrent()
     {
+        lock (FileLock)
+        {
+            if (!_hasCachedData)
+            {
+                // 自动保存前先加载磁盘数据，避免用静态初始空对象覆盖真实卡牌仓库。
+                Load();
+            }
+
+            if (_saveBlockedByLoadFailure)
+            {
+                Debug.LogError("Save current card collection skipped: cached data came from a failed load.");
+                return;
+            }
+        }
+
         Save(_cached ?? new CardCollectionData());
     }
 
@@ -271,6 +308,9 @@ public static class CardCollectionStore
         return data;
     }
 
+    /// <summary>
+    /// 获取卡牌仓库数据目录（游戏根目录/UserData）。
+    /// </summary>
     private static string GetDataFolderPath()
     {
         var dataPath = Application.dataPath;
@@ -279,7 +319,28 @@ public static class CardCollectionStore
         return Path.Combine(gameRoot, DataFolderName);
     }
 
+    /// <summary>
+    /// 获取卡牌仓库加密文件完整路径。
+    /// </summary>
     private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+
+    /// <summary>
+    /// 标记当前缓存已经可信，可被后续自动保存写回。
+    /// </summary>
+    private static void MarkCacheReadyForSave()
+    {
+        _hasCachedData = true;
+        _saveBlockedByLoadFailure = false;
+    }
+
+    /// <summary>
+    /// 标记加载失败，后续自动保存必须跳过以保护原始文件。
+    /// </summary>
+    private static void MarkLoadFailure()
+    {
+        _hasCachedData = true;
+        _saveBlockedByLoadFailure = true;
+    }
 
     #endregion
 }
