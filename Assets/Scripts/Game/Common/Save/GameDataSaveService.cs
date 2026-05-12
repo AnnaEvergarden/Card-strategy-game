@@ -1,4 +1,4 @@
-using Game.Common.Auth;
+using Game.Common.Save;
 using UnityEngine;
 
 /// <summary>
@@ -13,8 +13,13 @@ public static class GameDataSaveService
     /// </summary>
     public static void SaveAll()
     {
-        // 账号数据在每次操作时已落盘，这里读取一次可触发文件校验流程。
-        _ = AccountStore.GetCurrentUser();
+        if (!PlayerDataPath.TryGetCurrentUserKey(out _))
+        {
+            Debug.Log("Game data save skipped: 当前没有登录账号。");
+            return;
+        }
+
+        // 账号数据在每次操作时已落盘；这里只保存当前账号隔离目录下的玩家进度。
         CurrencyStore.SaveCurrent();
         InventoryStore.SaveCurrent();
         CardCollectionStore.SaveCurrent();

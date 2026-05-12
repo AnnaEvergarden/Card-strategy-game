@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Game.Common.Save;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -10,11 +11,6 @@ using UnityEngine;
 public static class CardCollectionStore
 {
     #region Fields
-
-    /// <summary>
-    /// 数据目录名（与账号、道具一致，位于游戏根目录下）。
-    /// </summary>
-    private const string DataFolderName = "UserData";
 
     /// <summary>
     /// 加密后的卡牌仓库文件名。
@@ -30,6 +26,16 @@ public static class CardCollectionStore
     /// 文件读写锁。
     /// </summary>
     private static readonly object FileLock = new();
+
+    /// <summary>
+    /// 当前缓存所属的账号目录键。
+    /// </summary>
+    private static string _cachedUserKey = string.Empty;
+
+    /// <summary>
+    /// 当前缓存是否来自可安全保存的数据源。
+    /// </summary>
+    private static bool _cachedCanSave;
 
     #endregion
 
@@ -75,38 +81,44 @@ public static class CardCollectionStore
     {
         lock (FileLock)
         {
+            if (!PlayerDataPath.TryGetCurrentUserFilePath(DataFileName, out var encryptedPath, out var userKey))
+            {
+                MarkCache(CreateDefaultIfNeeded(), string.Empty, false);
+                return _cached;
+            }
+
             try
             {
-                var encryptedPath = GetEncryptedFilePath();
-
                 if (File.Exists(encryptedPath))
                 {
                     var bytes = File.ReadAllBytes(encryptedPath);
                     if (bytes == null || bytes.Length <= 16)
                     {
-                        _cached = CreateDefaultIfNeeded();
+                        Debug.LogWarning($"Load card collection failed: 数据文件无效，已阻止自动覆盖 => {encryptedPath}");
+                        MarkCache(CreateDefaultIfNeeded(), userKey, false);
                         return _cached;
                     }
 
                     var json = LocalDataCrypto.DecryptToUtf8(bytes);
                     if (string.IsNullOrWhiteSpace(json))
                     {
-                        _cached = CreateDefaultIfNeeded();
+                        Debug.LogWarning($"Load card collection failed: 数据内容为空，已阻止自动覆盖 => {encryptedPath}");
+                        MarkCache(CreateDefaultIfNeeded(), userKey, false);
                         return _cached;
                     }
 
                     var data = JsonUtility.FromJson<CardCollectionData>(json);
-                    _cached = data ?? new CardCollectionData();
+                    MarkCache(data ?? new CardCollectionData(), userKey, true);
                     return _cached;
                 }
 
-                _cached = CreateDefaultIfNeeded();
+                MarkCache(CreateDefaultIfNeeded(), userKey, true);
                 return _cached;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Load card collection failed: {ex.Message}");
-                _cached = new CardCollectionData();
+                MarkCache(new CardCollectionData(), userKey, false);
                 return _cached;
             }
         }
@@ -119,18 +131,20 @@ public static class CardCollectionStore
     {
         lock (FileLock)
         {
+            if (!PlayerDataPath.TryEnsureCurrentUserFolder(out _, out var userKey) ||
+                !PlayerDataPath.TryGetCurrentUserFilePath(DataFileName, out var path, out _))
+            {
+                Debug.LogWarning("Save card collection skipped: 当前没有登录账号。");
+                return;
+            }
+
             try
             {
-                var folder = GetDataFolderPath();
-                if (!Directory.Exists(folder))
-                {
-                    Directory.CreateDirectory(folder);
-                }
-
-                _cached = data ?? new CardCollectionData();
-                var json = JsonUtility.ToJson(_cached, true);
+                var saveData = data ?? new CardCollectionData();
+                var json = JsonUtility.ToJson(saveData, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                File.WriteAllBytes(path, encrypted);
+                MarkCache(saveData, userKey, true);
             }
             catch (Exception ex)
             {
@@ -144,7 +158,16 @@ public static class CardCollectionStore
     /// </summary>
     public static void SaveCurrent()
     {
-        Save(_cached ?? new CardCollectionData());
+        lock (FileLock)
+        {
+            if (!CanSaveCurrentCache(out var reason))
+            {
+                Debug.LogWarning($"Save card collection skipped: {reason}");
+                return;
+            }
+
+            Save(_cached ?? new CardCollectionData());
+        }
     }
 
     /// <summary>
@@ -160,6 +183,11 @@ public static class CardCollectionStore
         lock (FileLock)
         {
             Load();
+            if (!_cachedCanSave)
+            {
+                return;
+            }
+
             _cached.cards ??= new List<CardEntry>();
             var id = cardId.Trim();
             for (var i = 0; i < _cached.cards.Count; i++)
@@ -192,6 +220,11 @@ public static class CardCollectionStore
         lock (FileLock)
         {
             Load();
+            if (!_cachedCanSave)
+            {
+                return false;
+            }
+
             _cached.cards ??= new List<CardEntry>();
             var id = cardId.Trim();
             for (var i = 0; i < _cached.cards.Count; i++)
@@ -235,6 +268,11 @@ public static class CardCollectionStore
         lock (FileLock)
         {
             Load();
+            if (!_cachedCanSave)
+            {
+                return false;
+            }
+
             _cached.cards ??= new List<CardEntry>();
             var id = cardId.Trim();
             for (var i = 0; i < _cached.cards.Count; i++)
@@ -271,15 +309,42 @@ public static class CardCollectionStore
         return data;
     }
 
-    private static string GetDataFolderPath()
+    /// <summary>
+    /// 更新内存缓存及其账号归属。
+    /// </summary>
+    private static void MarkCache(CardCollectionData data, string userKey, bool canSave)
     {
-        var dataPath = Application.dataPath;
-        var gameRoot = Directory.GetParent(dataPath)?.FullName;
-        if (string.IsNullOrEmpty(gameRoot)) gameRoot = dataPath;
-        return Path.Combine(gameRoot, DataFolderName);
+        _cached = data ?? new CardCollectionData();
+        _cachedUserKey = userKey ?? string.Empty;
+        _cachedCanSave = canSave;
     }
 
-    private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+    /// <summary>
+    /// 判断当前缓存是否仍属于当前登录账号且可安全写回。
+    /// </summary>
+    private static bool CanSaveCurrentCache(out string reason)
+    {
+        reason = string.Empty;
+        if (!PlayerDataPath.TryGetCurrentUserKey(out var currentUserKey))
+        {
+            reason = "当前没有登录账号。";
+            return false;
+        }
+
+        if (!_cachedCanSave)
+        {
+            reason = "当前缓存不是从可安全保存的数据源加载，避免覆盖已有存档。";
+            return false;
+        }
+
+        if (!string.Equals(_cachedUserKey, currentUserKey, StringComparison.Ordinal))
+        {
+            reason = "当前缓存所属账号与登录账号不一致，避免跨账号覆盖。";
+            return false;
+        }
+
+        return true;
+    }
 
     #endregion
 }

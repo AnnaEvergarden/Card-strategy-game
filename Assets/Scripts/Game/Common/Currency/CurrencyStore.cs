@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Game.Common.Save;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -9,11 +10,6 @@ using UnityEngine;
 public static class CurrencyStore
 {
     #region Fields
-
-    /// <summary>
-    /// 资源数据文件夹名。
-    /// </summary>
-    private const string DataFolderName = "UserData";
 
     /// <summary>
     /// 加密后的资源数据文件名。
@@ -29,6 +25,16 @@ public static class CurrencyStore
     /// 文件读写锁。
     /// </summary>
     private static readonly object FileLock = new();
+
+    /// <summary>
+    /// 当前缓存所属的账号目录键。
+    /// </summary>
+    private static string _cachedUserKey = string.Empty;
+
+    /// <summary>
+    /// 当前缓存是否来自可安全保存的数据源。
+    /// </summary>
+    private static bool _cachedCanSave;
 
     #endregion
 
@@ -67,9 +73,14 @@ public static class CurrencyStore
     {
         lock (FileLock)
         {
+            if (!PlayerDataPath.TryGetCurrentUserFilePath(DataFileName, out var path, out var userKey))
+            {
+                MarkCache(CreateDefault(), string.Empty, false);
+                return _cached;
+            }
+
             try
             {
-                var path = GetEncryptedFilePath();
                 if (File.Exists(path))
                 {
                     var bytes = File.ReadAllBytes(path);
@@ -78,20 +89,25 @@ public static class CurrencyStore
                         var json = LocalDataCrypto.DecryptToUtf8(bytes);
                         if (!string.IsNullOrWhiteSpace(json))
                         {
-                            _cached = JsonUtility.FromJson<CurrencyData>(json) ?? CreateDefault();
-                            Normalize(_cached);
+                            var data = JsonUtility.FromJson<CurrencyData>(json) ?? CreateDefault();
+                            Normalize(data);
+                            MarkCache(data, userKey, true);
                             return _cached;
                         }
                     }
+
+                    Debug.LogWarning($"Load currency failed: 数据文件无效，已阻止自动覆盖 => {path}");
+                    MarkCache(CreateDefault(), userKey, false);
+                    return _cached;
                 }
 
-                _cached = CreateDefault();
+                MarkCache(CreateDefault(), userKey, true);
                 return _cached;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Load currency failed: {ex.Message}");
-                _cached = CreateDefault();
+                MarkCache(CreateDefault(), userKey, false);
                 return _cached;
             }
         }
@@ -104,19 +120,21 @@ public static class CurrencyStore
     {
         lock (FileLock)
         {
+            if (!PlayerDataPath.TryEnsureCurrentUserFolder(out _, out var userKey) ||
+                !PlayerDataPath.TryGetCurrentUserFilePath(DataFileName, out var path, out _))
+            {
+                Debug.LogWarning("Save currency skipped: 当前没有登录账号。");
+                return;
+            }
+
             try
             {
-                var folder = GetDataFolderPath();
-                if (!Directory.Exists(folder))
-                {
-                    Directory.CreateDirectory(folder);
-                }
-
-                _cached = data ?? CreateDefault();
-                Normalize(_cached);
-                var json = JsonUtility.ToJson(_cached, true);
+                var saveData = data ?? CreateDefault();
+                Normalize(saveData);
+                var json = JsonUtility.ToJson(saveData, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                File.WriteAllBytes(path, encrypted);
+                MarkCache(saveData, userKey, true);
             }
             catch (Exception ex)
             {
@@ -130,7 +148,16 @@ public static class CurrencyStore
     /// </summary>
     public static void SaveCurrent()
     {
-        Save(_cached ?? CreateDefault());
+        lock (FileLock)
+        {
+            if (!CanSaveCurrentCache(out var reason))
+            {
+                Debug.LogWarning($"Save currency skipped: {reason}");
+                return;
+            }
+
+            Save(_cached ?? CreateDefault());
+        }
     }
 
     /// <summary>
@@ -146,6 +173,11 @@ public static class CurrencyStore
         lock (FileLock)
         {
             var data = Load();
+            if (!_cachedCanSave)
+            {
+                return false;
+            }
+
             if (data.gold < gold || data.diamond < diamond || data.shipTicket < shipTicket)
             {
                 return false;
@@ -167,6 +199,11 @@ public static class CurrencyStore
         lock (FileLock)
         {
             var data = Load();
+            if (!_cachedCanSave)
+            {
+                return;
+            }
+
             if (gold > 0) data.gold += gold;
             if (diamond > 0) data.diamond += diamond;
             if (shipTicket > 0) data.shipTicket += shipTicket;
@@ -201,19 +238,42 @@ public static class CurrencyStore
         data.shipTicket = Mathf.Max(0, data.shipTicket);
     }
 
-    private static string GetDataFolderPath()
+    /// <summary>
+    /// 更新内存缓存及其账号归属。
+    /// </summary>
+    private static void MarkCache(CurrencyData data, string userKey, bool canSave)
     {
-        var dataPath = Application.dataPath;
-        var gameRoot = Directory.GetParent(dataPath)?.FullName;
-        if (string.IsNullOrEmpty(gameRoot))
-        {
-            gameRoot = dataPath;
-        }
-
-        return Path.Combine(gameRoot, DataFolderName);
+        _cached = data ?? CreateDefault();
+        _cachedUserKey = userKey ?? string.Empty;
+        _cachedCanSave = canSave;
     }
 
-    private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+    /// <summary>
+    /// 判断当前缓存是否仍属于当前登录账号且可安全写回。
+    /// </summary>
+    private static bool CanSaveCurrentCache(out string reason)
+    {
+        reason = string.Empty;
+        if (!PlayerDataPath.TryGetCurrentUserKey(out var currentUserKey))
+        {
+            reason = "当前没有登录账号。";
+            return false;
+        }
+
+        if (!_cachedCanSave)
+        {
+            reason = "当前缓存不是从可安全保存的数据源加载，避免覆盖已有存档。";
+            return false;
+        }
+
+        if (!string.Equals(_cachedUserKey, currentUserKey, StringComparison.Ordinal))
+        {
+            reason = "当前缓存所属账号与登录账号不一致，避免跨账号覆盖。";
+            return false;
+        }
+
+        return true;
+    }
 
     #endregion
 }
