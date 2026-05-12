@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Game.Common.Save;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -10,11 +11,6 @@ using UnityEngine;
 public static class FleetStore
 {
     #region Fields
-
-    /// <summary>
-    /// 数据目录名（与账号、卡牌仓库一致）。
-    /// </summary>
-    private const string DataFolderName = "UserData";
 
     /// <summary>
     /// 编队数据文件名。
@@ -35,6 +31,16 @@ public static class FleetStore
     /// 文件读写锁。
     /// </summary>
     private static readonly object FileLock = new();
+
+    /// <summary>
+    /// 当前缓存所属的账号目录键。
+    /// </summary>
+    private static string _cachedUserKey = string.Empty;
+
+    /// <summary>
+    /// 当前缓存是否来自可安全保存的数据源。
+    /// </summary>
+    private static bool _cachedCanSave;
 
     #endregion
 
@@ -80,9 +86,14 @@ public static class FleetStore
     {
         lock (FileLock)
         {
+            if (!PlayerDataPath.TryGetCurrentUserFilePath(DataFileName, out var encryptedPath, out var userKey))
+            {
+                MarkCache(CreateDefaultFromCollection(), string.Empty, false);
+                return _cached;
+            }
+
             try
             {
-                var encryptedPath = GetEncryptedFilePath();
                 if (File.Exists(encryptedPath))
                 {
                     var bytes = File.ReadAllBytes(encryptedPath);
@@ -92,20 +103,25 @@ public static class FleetStore
                         if (!string.IsNullOrWhiteSpace(json))
                         {
                             var data = JsonUtility.FromJson<FleetData>(json);
-                            _cached = data ?? new FleetData();
-                            Normalize(_cached);
+                            data ??= new FleetData();
+                            Normalize(data);
+                            MarkCache(data, userKey, true);
                             return _cached;
                         }
                     }
+
+                    Debug.LogWarning($"Load fleet data failed: 数据文件无效，已阻止自动覆盖 => {encryptedPath}");
+                    MarkCache(CreateDefaultFromCollection(), userKey, false);
+                    return _cached;
                 }
 
-                _cached = CreateDefaultFromCollection();
+                MarkCache(CreateDefaultFromCollection(), userKey, true);
                 return _cached;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Load fleet data failed: {ex.Message}");
-                _cached = CreateDefaultFromCollection();
+                MarkCache(CreateDefaultFromCollection(), userKey, false);
                 return _cached;
             }
         }
@@ -118,19 +134,21 @@ public static class FleetStore
     {
         lock (FileLock)
         {
+            if (!PlayerDataPath.TryEnsureCurrentUserFolder(out _, out var userKey) ||
+                !PlayerDataPath.TryGetCurrentUserFilePath(DataFileName, out var path, out _))
+            {
+                Debug.LogWarning("Save fleet data skipped: 当前没有登录账号。");
+                return;
+            }
+
             try
             {
-                var folder = GetDataFolderPath();
-                if (!Directory.Exists(folder))
-                {
-                    Directory.CreateDirectory(folder);
-                }
-
-                _cached = data ?? new FleetData();
-                Normalize(_cached);
-                var json = JsonUtility.ToJson(_cached, true);
+                var saveData = data ?? new FleetData();
+                Normalize(saveData);
+                var json = JsonUtility.ToJson(saveData, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                File.WriteAllBytes(path, encrypted);
+                MarkCache(saveData, userKey, true);
             }
             catch (Exception ex)
             {
@@ -144,7 +162,16 @@ public static class FleetStore
     /// </summary>
     public static void SaveCurrent()
     {
-        Save(_cached ?? new FleetData());
+        lock (FileLock)
+        {
+            if (!CanSaveCurrentCache(out var reason))
+            {
+                Debug.LogWarning($"Save fleet data skipped: {reason}");
+                return;
+            }
+
+            Save(_cached ?? new FleetData());
+        }
     }
 
     #endregion
@@ -213,19 +240,42 @@ public static class FleetStore
         return data;
     }
 
-    private static string GetDataFolderPath()
+    /// <summary>
+    /// 更新内存缓存及其账号归属。
+    /// </summary>
+    private static void MarkCache(FleetData data, string userKey, bool canSave)
     {
-        var dataPath = Application.dataPath;
-        var gameRoot = Directory.GetParent(dataPath)?.FullName;
-        if (string.IsNullOrEmpty(gameRoot))
-        {
-            gameRoot = dataPath;
-        }
-
-        return Path.Combine(gameRoot, DataFolderName);
+        _cached = data ?? new FleetData();
+        _cachedUserKey = userKey ?? string.Empty;
+        _cachedCanSave = canSave;
     }
 
-    private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+    /// <summary>
+    /// 判断当前缓存是否仍属于当前登录账号且可安全写回。
+    /// </summary>
+    private static bool CanSaveCurrentCache(out string reason)
+    {
+        reason = string.Empty;
+        if (!PlayerDataPath.TryGetCurrentUserKey(out var currentUserKey))
+        {
+            reason = "当前没有登录账号。";
+            return false;
+        }
+
+        if (!_cachedCanSave)
+        {
+            reason = "当前缓存不是从可安全保存的数据源加载，避免覆盖已有存档。";
+            return false;
+        }
+
+        if (!string.Equals(_cachedUserKey, currentUserKey, StringComparison.Ordinal))
+        {
+            reason = "当前缓存所属账号与登录账号不一致，避免跨账号覆盖。";
+            return false;
+        }
+
+        return true;
+    }
 
     #endregion
 }
