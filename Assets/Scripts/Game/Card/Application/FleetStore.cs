@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Game.Common.Save;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -10,11 +11,6 @@ using UnityEngine;
 public static class FleetStore
 {
     #region Fields
-
-    /// <summary>
-    /// 数据目录名（与账号、卡牌仓库一致）。
-    /// </summary>
-    private const string DataFolderName = "UserData";
 
     /// <summary>
     /// 编队数据文件名。
@@ -30,6 +26,11 @@ public static class FleetStore
     /// 内存缓存。
     /// </summary>
     private static FleetData _cached = new();
+
+    /// <summary>
+    /// 当前缓存对应的实际文件路径，用于账号切换后避免把旧缓存写入新账号。
+    /// </summary>
+    private static string _cachedFilePath;
 
     /// <summary>
     /// 文件读写锁。
@@ -82,7 +83,8 @@ public static class FleetStore
         {
             try
             {
-                var encryptedPath = GetEncryptedFilePath();
+                var encryptedPath = PlayerDataPath.GetCurrentPlayerFilePath(DataFileName, migrateLegacyFile: true);
+                _cachedFilePath = encryptedPath;
                 if (File.Exists(encryptedPath))
                 {
                     var bytes = File.ReadAllBytes(encryptedPath);
@@ -118,33 +120,25 @@ public static class FleetStore
     {
         lock (FileLock)
         {
-            try
-            {
-                var folder = GetDataFolderPath();
-                if (!Directory.Exists(folder))
-                {
-                    Directory.CreateDirectory(folder);
-                }
-
-                _cached = data ?? new FleetData();
-                Normalize(_cached);
-                var json = JsonUtility.ToJson(_cached, true);
-                var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"Save fleet data failed: {ex.Message}");
-            }
+            var path = PlayerDataPath.GetCurrentPlayerFilePath(DataFileName);
+            SaveToPath(data, path);
         }
     }
 
     /// <summary>
-    /// 退出前保存当前缓存。
+    /// 退出前保存当前已加载编队缓存；尚未加载时跳过，避免写入默认空编队。
     /// </summary>
     public static void SaveCurrent()
     {
-        Save(_cached ?? new FleetData());
+        lock (FileLock)
+        {
+            if (string.IsNullOrEmpty(_cachedFilePath))
+            {
+                return;
+            }
+
+            SaveToPath(_cached ?? new FleetData(), _cachedFilePath);
+        }
     }
 
     #endregion
@@ -213,19 +207,31 @@ public static class FleetStore
         return data;
     }
 
-    private static string GetDataFolderPath()
+    /// <summary>
+    /// 将编队数据保存到指定路径，并同步缓存路径。
+    /// </summary>
+    private static void SaveToPath(FleetData data, string path)
     {
-        var dataPath = Application.dataPath;
-        var gameRoot = Directory.GetParent(dataPath)?.FullName;
-        if (string.IsNullOrEmpty(gameRoot))
+        try
         {
-            gameRoot = dataPath;
+            var folder = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+
+            _cached = data ?? new FleetData();
+            Normalize(_cached);
+            _cachedFilePath = path;
+            var json = JsonUtility.ToJson(_cached, true);
+            var encrypted = LocalDataCrypto.EncryptUtf8(json);
+            File.WriteAllBytes(path, encrypted);
         }
-
-        return Path.Combine(gameRoot, DataFolderName);
+        catch (Exception ex)
+        {
+            Debug.LogError($"Save fleet data failed: {ex.Message}");
+        }
     }
-
-    private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
 
     #endregion
 }

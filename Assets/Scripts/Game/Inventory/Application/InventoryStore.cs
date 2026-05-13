@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Game.Common.Save;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -12,11 +13,6 @@ public static class InventoryStore
     #region Fields
 
     /// <summary>
-    /// 仓库数据文件夹名。
-    /// </summary>
-    private const string DataFolderName = "UserData";
-
-    /// <summary>
     /// 加密后的仓库数据文件名。
     /// </summary>
     private const string DataFileName = "inventory.dat";
@@ -25,6 +21,11 @@ public static class InventoryStore
     /// 最近一次加载或保存的仓库缓存。
     /// </summary>
     private static InventoryData _cachedData = new();
+
+    /// <summary>
+    /// 当前缓存对应的实际文件路径，用于账号切换后避免把旧缓存写入新账号。
+    /// </summary>
+    private static string _cachedFilePath;
 
     /// <summary>
     /// 文件读写锁。
@@ -82,7 +83,8 @@ public static class InventoryStore
         {
             try
             {
-                var encryptedPath = GetEncryptedFilePath();
+                var encryptedPath = PlayerDataPath.GetCurrentPlayerFilePath(DataFileName, migrateLegacyFile: true);
+                _cachedFilePath = encryptedPath;
 
                 if (File.Exists(encryptedPath))
                 {
@@ -124,32 +126,25 @@ public static class InventoryStore
     {
         lock (FileLock)
         {
-            try
-            {
-                var folder = GetDataFolderPath();
-                if (!Directory.Exists(folder))
-                {
-                    Directory.CreateDirectory(folder);
-                }
-
-                _cachedData = data ?? new InventoryData();
-                var json = JsonUtility.ToJson(_cachedData, true);
-                var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"Save inventory failed: {ex.Message}");
-            }
+            var path = PlayerDataPath.GetCurrentPlayerFilePath(DataFileName);
+            SaveToPath(data, path);
         }
     }
 
     /// <summary>
-    /// 退出前强制保存当前仓库缓存。
+    /// 退出前保存当前已加载仓库缓存；尚未加载时跳过，避免写入默认空仓库。
     /// </summary>
     public static void SaveCurrent()
     {
-        Save(_cachedData ?? new InventoryData());
+        lock (FileLock)
+        {
+            if (string.IsNullOrEmpty(_cachedFilePath))
+            {
+                return;
+            }
+
+            SaveToPath(_cachedData ?? new InventoryData(), _cachedFilePath);
+        }
     }
 
     /// <summary>
@@ -272,17 +267,29 @@ public static class InventoryStore
     #region Private Methods
 
     /// <summary>
-    /// 获取仓库数据目录（游戏根目录/UserData）。
+    /// 将仓库数据保存到指定路径，并同步缓存路径。
     /// </summary>
-    private static string GetDataFolderPath()
+    private static void SaveToPath(InventoryData data, string path)
     {
-        var dataPath = Application.dataPath;
-        var gameRootPath = Directory.GetParent(dataPath)?.FullName;
-        if (string.IsNullOrEmpty(gameRootPath)) gameRootPath = dataPath;
-        return Path.Combine(gameRootPath, DataFolderName);
-    }
+        try
+        {
+            var folder = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
 
-    private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+            _cachedData = data ?? new InventoryData();
+            _cachedFilePath = path;
+            var json = JsonUtility.ToJson(_cachedData, true);
+            var encrypted = LocalDataCrypto.EncryptUtf8(json);
+            File.WriteAllBytes(path, encrypted);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Save inventory failed: {ex.Message}");
+        }
+    }
 
     #endregion
 }

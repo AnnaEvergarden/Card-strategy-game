@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Game.Common.Save;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -11,11 +12,6 @@ public static class CurrencyStore
     #region Fields
 
     /// <summary>
-    /// 资源数据文件夹名。
-    /// </summary>
-    private const string DataFolderName = "UserData";
-
-    /// <summary>
     /// 加密后的资源数据文件名。
     /// </summary>
     private const string DataFileName = "currency.dat";
@@ -24,6 +20,11 @@ public static class CurrencyStore
     /// 内存缓存。
     /// </summary>
     private static CurrencyData _cached = new();
+
+    /// <summary>
+    /// 当前缓存对应的实际文件路径，用于账号切换后避免把旧缓存写入新账号。
+    /// </summary>
+    private static string _cachedFilePath;
 
     /// <summary>
     /// 文件读写锁。
@@ -69,7 +70,8 @@ public static class CurrencyStore
         {
             try
             {
-                var path = GetEncryptedFilePath();
+                var path = PlayerDataPath.GetCurrentPlayerFilePath(DataFileName, migrateLegacyFile: true);
+                _cachedFilePath = path;
                 if (File.Exists(path))
                 {
                     var bytes = File.ReadAllBytes(path);
@@ -104,33 +106,25 @@ public static class CurrencyStore
     {
         lock (FileLock)
         {
-            try
-            {
-                var folder = GetDataFolderPath();
-                if (!Directory.Exists(folder))
-                {
-                    Directory.CreateDirectory(folder);
-                }
-
-                _cached = data ?? CreateDefault();
-                Normalize(_cached);
-                var json = JsonUtility.ToJson(_cached, true);
-                var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"Save currency failed: {ex.Message}");
-            }
+            var path = PlayerDataPath.GetCurrentPlayerFilePath(DataFileName);
+            SaveToPath(data, path);
         }
     }
 
     /// <summary>
-    /// 保存当前缓存。
+    /// 保存当前已加载或已写入的缓存；尚未加载时跳过，避免账号切换后写入默认空档。
     /// </summary>
     public static void SaveCurrent()
     {
-        Save(_cached ?? CreateDefault());
+        lock (FileLock)
+        {
+            if (string.IsNullOrEmpty(_cachedFilePath))
+            {
+                return;
+            }
+
+            SaveToPath(_cached ?? CreateDefault(), _cachedFilePath);
+        }
     }
 
     /// <summary>
@@ -201,19 +195,31 @@ public static class CurrencyStore
         data.shipTicket = Mathf.Max(0, data.shipTicket);
     }
 
-    private static string GetDataFolderPath()
+    /// <summary>
+    /// 将资源数据保存到指定路径，并同步缓存路径。
+    /// </summary>
+    private static void SaveToPath(CurrencyData data, string path)
     {
-        var dataPath = Application.dataPath;
-        var gameRoot = Directory.GetParent(dataPath)?.FullName;
-        if (string.IsNullOrEmpty(gameRoot))
+        try
         {
-            gameRoot = dataPath;
+            var folder = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+
+            _cached = data ?? CreateDefault();
+            Normalize(_cached);
+            _cachedFilePath = path;
+            var json = JsonUtility.ToJson(_cached, true);
+            var encrypted = LocalDataCrypto.EncryptUtf8(json);
+            File.WriteAllBytes(path, encrypted);
         }
-
-        return Path.Combine(gameRoot, DataFolderName);
+        catch (Exception ex)
+        {
+            Debug.LogError($"Save currency failed: {ex.Message}");
+        }
     }
-
-    private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
 
     #endregion
 }
