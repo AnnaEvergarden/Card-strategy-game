@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Game.Common.Auth;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -12,7 +13,7 @@ public static class FleetStore
     #region Fields
 
     /// <summary>
-    /// 数据目录名（与账号、卡牌仓库一致）。
+    /// 旧版共享编队数据文件夹名，当前版本仅用于单账号旧档迁移。
     /// </summary>
     private const string DataFolderName = "UserData";
 
@@ -30,6 +31,16 @@ public static class FleetStore
     /// 内存缓存。
     /// </summary>
     private static FleetData _cached = new();
+
+    /// <summary>
+    /// 当前缓存是否允许写回磁盘；读档失败后禁止自动保存以保护原文件。
+    /// </summary>
+    private static bool _canSaveCached = true;
+
+    /// <summary>
+    /// 当前缓存所属账号存储键，用于账号切换时重载数据。
+    /// </summary>
+    private static string _cachedProfileKey = string.Empty;
 
     /// <summary>
     /// 文件读写锁。
@@ -80,32 +91,40 @@ public static class FleetStore
     {
         lock (FileLock)
         {
+            var profileKey = AccountStore.GetCurrentUserStorageKey();
             try
             {
-                var encryptedPath = GetEncryptedFilePath();
+                var encryptedPath = GetLoadFilePath();
                 if (File.Exists(encryptedPath))
                 {
                     var bytes = File.ReadAllBytes(encryptedPath);
-                    if (bytes != null && bytes.Length > 16)
+                    if (bytes == null || bytes.Length <= 16)
                     {
-                        var json = LocalDataCrypto.DecryptToUtf8(bytes);
-                        if (!string.IsNullOrWhiteSpace(json))
-                        {
-                            var data = JsonUtility.FromJson<FleetData>(json);
-                            _cached = data ?? new FleetData();
-                            Normalize(_cached);
-                            return _cached;
-                        }
+                        throw new InvalidDataException("编队数据文件为空或长度无效");
                     }
+
+                    var json = LocalDataCrypto.DecryptToUtf8(bytes);
+                    if (string.IsNullOrWhiteSpace(json))
+                    {
+                        throw new InvalidDataException("编队数据解密结果为空");
+                    }
+
+                    var data = JsonUtility.FromJson<FleetData>(json);
+                    _cached = data ?? new FleetData();
+                    Normalize(_cached);
+                    MarkLoadSucceeded(profileKey);
+                    return _cached;
                 }
 
                 _cached = CreateDefaultFromCollection();
+                MarkLoadSucceeded(profileKey);
                 return _cached;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Load fleet data failed: {ex.Message}");
                 _cached = CreateDefaultFromCollection();
+                MarkLoadFailed(profileKey);
                 return _cached;
             }
         }
@@ -118,6 +137,13 @@ public static class FleetStore
     {
         lock (FileLock)
         {
+            var profileKey = AccountStore.GetCurrentUserStorageKey();
+            if (!_canSaveCached && string.Equals(_cachedProfileKey, profileKey, StringComparison.Ordinal))
+            {
+                Debug.LogWarning("Save fleet data skipped because the last load failed; keeping existing file untouched.");
+                return;
+            }
+
             try
             {
                 var folder = GetDataFolderPath();
@@ -127,10 +153,12 @@ public static class FleetStore
                 }
 
                 _cached = data ?? new FleetData();
+                _cachedProfileKey = profileKey;
                 Normalize(_cached);
                 var json = JsonUtility.ToJson(_cached, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
                 File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                _canSaveCached = true;
             }
             catch (Exception ex)
             {
@@ -144,7 +172,15 @@ public static class FleetStore
     /// </summary>
     public static void SaveCurrent()
     {
-        Save(_cached ?? new FleetData());
+        lock (FileLock)
+        {
+            if (!IsCacheForCurrentProfile())
+            {
+                Load();
+            }
+
+            Save(_cached ?? new FleetData());
+        }
     }
 
     #endregion
@@ -213,7 +249,44 @@ public static class FleetStore
         return data;
     }
 
+    /// <summary>
+    /// 标记读档成功，并把缓存绑定到当前账号。
+    /// </summary>
+    private static void MarkLoadSucceeded(string profileKey)
+    {
+        _cachedProfileKey = profileKey;
+        _canSaveCached = true;
+    }
+
+    /// <summary>
+    /// 标记读档失败，后续自动保存会跳过以保护原文件。
+    /// </summary>
+    private static void MarkLoadFailed(string profileKey)
+    {
+        _cachedProfileKey = profileKey;
+        _canSaveCached = false;
+    }
+
+    /// <summary>
+    /// 判断当前缓存是否属于当前登录账号。
+    /// </summary>
+    private static bool IsCacheForCurrentProfile()
+    {
+        return string.Equals(_cachedProfileKey, AccountStore.GetCurrentUserStorageKey(), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// 获取当前账号的数据目录。
+    /// </summary>
     private static string GetDataFolderPath()
+    {
+        return AccountStore.GetCurrentUserDataFolderPath();
+    }
+
+    /// <summary>
+    /// 获取旧版共享数据目录，用于单账号项目升级时兼容旧档。
+    /// </summary>
+    private static string GetLegacyDataFolderPath()
     {
         var dataPath = Application.dataPath;
         var gameRoot = Directory.GetParent(dataPath)?.FullName;
@@ -225,7 +298,25 @@ public static class FleetStore
         return Path.Combine(gameRoot, DataFolderName);
     }
 
+    /// <summary>
+    /// 获取当前账号编队数据文件完整路径。
+    /// </summary>
     private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+
+    /// <summary>
+    /// 获取本次读取应使用的文件路径；当前账号无档且仅有单账号时允许读取旧共享档。
+    /// </summary>
+    private static string GetLoadFilePath()
+    {
+        var currentPath = GetEncryptedFilePath();
+        if (File.Exists(currentPath))
+        {
+            return currentPath;
+        }
+
+        var legacyPath = Path.Combine(GetLegacyDataFolderPath(), DataFileName);
+        return AccountStore.CanMigrateLegacyUserData() && File.Exists(legacyPath) ? legacyPath : currentPath;
+    }
 
     #endregion
 }
