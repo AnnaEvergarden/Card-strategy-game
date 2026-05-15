@@ -11,11 +11,6 @@ public static class CurrencyStore
     #region Fields
 
     /// <summary>
-    /// 资源数据文件夹名。
-    /// </summary>
-    private const string DataFolderName = "UserData";
-
-    /// <summary>
     /// 加密后的资源数据文件名。
     /// </summary>
     private const string DataFileName = "currency.dat";
@@ -24,6 +19,11 @@ public static class CurrencyStore
     /// 内存缓存。
     /// </summary>
     private static CurrencyData _cached = new();
+
+    /// <summary>
+    /// 当前缓存所属账号；用于避免登出或切换账号后把旧缓存写入新账号。
+    /// </summary>
+    private static string _cachedUser = string.Empty;
 
     /// <summary>
     /// 文件读写锁。
@@ -69,7 +69,13 @@ public static class CurrencyStore
         {
             try
             {
-                var path = GetEncryptedFilePath();
+                if (!TryGetActiveFilePath(out var path, out var currentUser))
+                {
+                    _cachedUser = string.Empty;
+                    _cached = CreateDefault();
+                    return _cached;
+                }
+
                 if (File.Exists(path))
                 {
                     var bytes = File.ReadAllBytes(path);
@@ -80,18 +86,29 @@ public static class CurrencyStore
                         {
                             _cached = JsonUtility.FromJson<CurrencyData>(json) ?? CreateDefault();
                             Normalize(_cached);
+                            _cachedUser = currentUser;
                             return _cached;
                         }
                     }
                 }
 
+                if (TryLoadLegacyData(out var legacyData))
+                {
+                    _cached = legacyData;
+                    _cachedUser = currentUser;
+                    Save(_cached);
+                    return _cached;
+                }
+
                 _cached = CreateDefault();
+                _cachedUser = currentUser;
                 return _cached;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Load currency failed: {ex.Message}");
                 _cached = CreateDefault();
+                _cachedUser = string.Empty;
                 return _cached;
             }
         }
@@ -106,17 +123,24 @@ public static class CurrencyStore
         {
             try
             {
-                var folder = GetDataFolderPath();
-                if (!Directory.Exists(folder))
+                if (!TryGetActiveFilePath(out var path, out var currentUser))
+                {
+                    Debug.LogWarning("Save currency skipped: no logged-in user.");
+                    return;
+                }
+
+                var folder = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
                 {
                     Directory.CreateDirectory(folder);
                 }
 
                 _cached = data ?? CreateDefault();
+                _cachedUser = currentUser;
                 Normalize(_cached);
                 var json = JsonUtility.ToJson(_cached, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                File.WriteAllBytes(path, encrypted);
             }
             catch (Exception ex)
             {
@@ -130,6 +154,19 @@ public static class CurrencyStore
     /// </summary>
     public static void SaveCurrent()
     {
+        var currentUser = UserDataPathService.GetCurrentUser();
+        if (string.IsNullOrWhiteSpace(currentUser))
+        {
+            Debug.Log("Save currency skipped: no logged-in user.");
+            return;
+        }
+
+        if (!string.Equals(_cachedUser, currentUser, StringComparison.Ordinal))
+        {
+            Debug.Log("Save currency skipped: cached data belongs to another user or has not been loaded.");
+            return;
+        }
+
         Save(_cached ?? CreateDefault());
     }
 
@@ -140,6 +177,12 @@ public static class CurrencyStore
     {
         if (gold < 0 || diamond < 0 || shipTicket < 0)
         {
+            return false;
+        }
+
+        if (!UserDataPathService.HasCurrentUser())
+        {
+            Debug.LogWarning("Consume currency failed: no logged-in user.");
             return false;
         }
 
@@ -164,6 +207,12 @@ public static class CurrencyStore
     /// </summary>
     public static void Add(int gold, int diamond, int shipTicket)
     {
+        if (!UserDataPathService.HasCurrentUser())
+        {
+            Debug.LogWarning("Add currency skipped: no logged-in user.");
+            return;
+        }
+
         lock (FileLock)
         {
             var data = Load();
@@ -201,19 +250,57 @@ public static class CurrencyStore
         data.shipTicket = Mathf.Max(0, data.shipTicket);
     }
 
-    private static string GetDataFolderPath()
+    /// <summary>
+    /// 尝试获取当前账号的资源文件路径。
+    /// </summary>
+    private static bool TryGetActiveFilePath(out string filePath, out string currentUser)
     {
-        var dataPath = Application.dataPath;
-        var gameRoot = Directory.GetParent(dataPath)?.FullName;
-        if (string.IsNullOrEmpty(gameRoot))
+        currentUser = UserDataPathService.GetCurrentUser();
+        if (string.IsNullOrWhiteSpace(currentUser))
         {
-            gameRoot = dataPath;
+            filePath = string.Empty;
+            return false;
         }
 
-        return Path.Combine(gameRoot, DataFolderName);
+        return UserDataPathService.TryGetCurrentUserDataFilePath(DataFileName, out filePath);
     }
 
-    private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+    /// <summary>
+    /// 尝试读取旧版共享资源文件，用于首次迁移到当前账号目录。
+    /// </summary>
+    private static bool TryLoadLegacyData(out CurrencyData data)
+    {
+        data = null;
+        var legacyPath = UserDataPathService.GetLegacySharedDataFilePath(DataFileName);
+        if (!File.Exists(legacyPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var bytes = File.ReadAllBytes(legacyPath);
+            if (bytes == null || bytes.Length <= 16)
+            {
+                return false;
+            }
+
+            var json = LocalDataCrypto.DecryptToUtf8(bytes);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return false;
+            }
+
+            data = JsonUtility.FromJson<CurrencyData>(json) ?? CreateDefault();
+            Normalize(data);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"Load legacy currency failed: {ex.Message}");
+            return false;
+        }
+    }
 
     #endregion
 }

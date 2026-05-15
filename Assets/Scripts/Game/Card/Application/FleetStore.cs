@@ -12,11 +12,6 @@ public static class FleetStore
     #region Fields
 
     /// <summary>
-    /// 数据目录名（与账号、卡牌仓库一致）。
-    /// </summary>
-    private const string DataFolderName = "UserData";
-
-    /// <summary>
     /// 编队数据文件名。
     /// </summary>
     private const string DataFileName = "fleet_data.dat";
@@ -30,6 +25,11 @@ public static class FleetStore
     /// 内存缓存。
     /// </summary>
     private static FleetData _cached = new();
+
+    /// <summary>
+    /// 当前缓存所属账号；用于避免账号切换后保存到错误目录。
+    /// </summary>
+    private static string _cachedUser = string.Empty;
 
     /// <summary>
     /// 文件读写锁。
@@ -82,7 +82,14 @@ public static class FleetStore
         {
             try
             {
-                var encryptedPath = GetEncryptedFilePath();
+                if (!TryGetActiveFilePath(out var encryptedPath, out var currentUser))
+                {
+                    _cachedUser = string.Empty;
+                    _cached = new FleetData();
+                    Normalize(_cached);
+                    return _cached;
+                }
+
                 if (File.Exists(encryptedPath))
                 {
                     var bytes = File.ReadAllBytes(encryptedPath);
@@ -94,18 +101,29 @@ public static class FleetStore
                             var data = JsonUtility.FromJson<FleetData>(json);
                             _cached = data ?? new FleetData();
                             Normalize(_cached);
+                            _cachedUser = currentUser;
                             return _cached;
                         }
                     }
                 }
 
+                if (TryLoadLegacyData(out var legacyData))
+                {
+                    _cached = legacyData;
+                    _cachedUser = currentUser;
+                    Save(_cached);
+                    return _cached;
+                }
+
                 _cached = CreateDefaultFromCollection();
+                _cachedUser = currentUser;
                 return _cached;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Load fleet data failed: {ex.Message}");
                 _cached = CreateDefaultFromCollection();
+                _cachedUser = string.Empty;
                 return _cached;
             }
         }
@@ -120,17 +138,24 @@ public static class FleetStore
         {
             try
             {
-                var folder = GetDataFolderPath();
-                if (!Directory.Exists(folder))
+                if (!TryGetActiveFilePath(out var path, out var currentUser))
+                {
+                    Debug.LogWarning("Save fleet data skipped: no logged-in user.");
+                    return;
+                }
+
+                var folder = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
                 {
                     Directory.CreateDirectory(folder);
                 }
 
                 _cached = data ?? new FleetData();
+                _cachedUser = currentUser;
                 Normalize(_cached);
                 var json = JsonUtility.ToJson(_cached, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                File.WriteAllBytes(path, encrypted);
             }
             catch (Exception ex)
             {
@@ -144,6 +169,19 @@ public static class FleetStore
     /// </summary>
     public static void SaveCurrent()
     {
+        var currentUser = UserDataPathService.GetCurrentUser();
+        if (string.IsNullOrWhiteSpace(currentUser))
+        {
+            Debug.Log("Save fleet data skipped: no logged-in user.");
+            return;
+        }
+
+        if (!string.Equals(_cachedUser, currentUser, StringComparison.Ordinal))
+        {
+            Debug.Log("Save fleet data skipped: cached data belongs to another user or has not been loaded.");
+            return;
+        }
+
         Save(_cached ?? new FleetData());
     }
 
@@ -213,19 +251,57 @@ public static class FleetStore
         return data;
     }
 
-    private static string GetDataFolderPath()
+    /// <summary>
+    /// 尝试获取当前账号的编队文件路径。
+    /// </summary>
+    private static bool TryGetActiveFilePath(out string filePath, out string currentUser)
     {
-        var dataPath = Application.dataPath;
-        var gameRoot = Directory.GetParent(dataPath)?.FullName;
-        if (string.IsNullOrEmpty(gameRoot))
+        currentUser = UserDataPathService.GetCurrentUser();
+        if (string.IsNullOrWhiteSpace(currentUser))
         {
-            gameRoot = dataPath;
+            filePath = string.Empty;
+            return false;
         }
 
-        return Path.Combine(gameRoot, DataFolderName);
+        return UserDataPathService.TryGetCurrentUserDataFilePath(DataFileName, out filePath);
     }
 
-    private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+    /// <summary>
+    /// 尝试读取旧版共享编队文件，用于首次迁移到当前账号目录。
+    /// </summary>
+    private static bool TryLoadLegacyData(out FleetData data)
+    {
+        data = null;
+        var legacyPath = UserDataPathService.GetLegacySharedDataFilePath(DataFileName);
+        if (!File.Exists(legacyPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var bytes = File.ReadAllBytes(legacyPath);
+            if (bytes == null || bytes.Length <= 16)
+            {
+                return false;
+            }
+
+            var json = LocalDataCrypto.DecryptToUtf8(bytes);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return false;
+            }
+
+            data = JsonUtility.FromJson<FleetData>(json) ?? new FleetData();
+            Normalize(data);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"Load legacy fleet data failed: {ex.Message}");
+            return false;
+        }
+    }
 
     #endregion
 }
