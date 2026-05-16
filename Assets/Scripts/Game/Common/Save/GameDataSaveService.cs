@@ -14,12 +14,29 @@ public static class GameDataSaveService
     public static void SaveAll()
     {
         // 账号数据在每次操作时已落盘，这里读取一次可触发文件校验流程。
-        _ = AccountStore.GetCurrentUser();
+        var currentUser = AccountStore.GetCurrentUser();
+        if (string.IsNullOrWhiteSpace(currentUser))
+        {
+            Debug.Log("Game data save skipped: 当前没有登录账号。");
+            return;
+        }
+
         CurrencyStore.SaveCurrent();
         InventoryStore.SaveCurrent();
         CardCollectionStore.SaveCurrent();
         FleetStore.SaveCurrent();
         Debug.Log("Game data saved before quit.");
+    }
+
+    /// <summary>
+    /// 清空所有按账号隔离的进度缓存；登录账号变化时调用，避免旧账号数据被退出自动保存写入新账号目录。
+    /// </summary>
+    public static void ClearCachedProgressData()
+    {
+        CurrencyStore.ClearCache();
+        InventoryStore.ClearCache();
+        CardCollectionStore.ClearCache();
+        FleetStore.ClearCache();
     }
 
     #endregion
