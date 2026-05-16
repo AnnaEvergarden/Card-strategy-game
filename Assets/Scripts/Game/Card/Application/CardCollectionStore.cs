@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Game.Common.Save;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -12,11 +13,6 @@ public static class CardCollectionStore
     #region Fields
 
     /// <summary>
-    /// 数据目录名（与账号、道具一致，位于游戏根目录下）。
-    /// </summary>
-    private const string DataFolderName = "UserData";
-
-    /// <summary>
     /// 加密后的卡牌仓库文件名。
     /// </summary>
     private const string DataFileName = "card_collection.dat";
@@ -25,6 +21,11 @@ public static class CardCollectionStore
     /// 内存缓存，供退出保存使用。
     /// </summary>
     private static CardCollectionData _cached = new();
+
+    /// <summary>
+    /// 当前缓存是否属于已登录账号的有效读写结果；账号切换后用于阻止旧缓存自动保存。
+    /// </summary>
+    private static bool _hasLoadedForCurrentUser;
 
     /// <summary>
     /// 文件读写锁。
@@ -77,7 +78,12 @@ public static class CardCollectionStore
         {
             try
             {
-                var encryptedPath = GetEncryptedFilePath();
+                if (!TryGetEncryptedFilePath(out var encryptedPath))
+                {
+                    _cached = new CardCollectionData();
+                    _hasLoadedForCurrentUser = false;
+                    return _cached;
+                }
 
                 if (File.Exists(encryptedPath))
                 {
@@ -85,6 +91,7 @@ public static class CardCollectionStore
                     if (bytes == null || bytes.Length <= 16)
                     {
                         _cached = CreateDefaultIfNeeded();
+                        _hasLoadedForCurrentUser = false;
                         return _cached;
                     }
 
@@ -92,21 +99,26 @@ public static class CardCollectionStore
                     if (string.IsNullOrWhiteSpace(json))
                     {
                         _cached = CreateDefaultIfNeeded();
+                        _hasLoadedForCurrentUser = false;
                         return _cached;
                     }
 
                     var data = JsonUtility.FromJson<CardCollectionData>(json);
                     _cached = data ?? new CardCollectionData();
+                    _cached.cards ??= new List<CardEntry>();
+                    _hasLoadedForCurrentUser = true;
                     return _cached;
                 }
 
                 _cached = CreateDefaultIfNeeded();
+                _hasLoadedForCurrentUser = true;
                 return _cached;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Load card collection failed: {ex.Message}");
                 _cached = new CardCollectionData();
+                _hasLoadedForCurrentUser = false;
                 return _cached;
             }
         }
@@ -121,16 +133,18 @@ public static class CardCollectionStore
         {
             try
             {
-                var folder = GetDataFolderPath();
-                if (!Directory.Exists(folder))
+                if (!TryGetEncryptedFilePath(out var encryptedPath, createFolder: true))
                 {
-                    Directory.CreateDirectory(folder);
+                    Debug.LogWarning("Save card collection skipped: 当前没有登录账号。");
+                    return;
                 }
 
                 _cached = data ?? new CardCollectionData();
+                _cached.cards ??= new List<CardEntry>();
                 var json = JsonUtility.ToJson(_cached, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                File.WriteAllBytes(encryptedPath, encrypted);
+                _hasLoadedForCurrentUser = true;
             }
             catch (Exception ex)
             {
@@ -144,7 +158,25 @@ public static class CardCollectionStore
     /// </summary>
     public static void SaveCurrent()
     {
+        if (!_hasLoadedForCurrentUser)
+        {
+            Debug.LogWarning("Save current card collection skipped: 当前账号卡牌仓库尚未成功加载。");
+            return;
+        }
+
         Save(_cached ?? new CardCollectionData());
+    }
+
+    /// <summary>
+    /// 清空运行时缓存；账号切换后调用，避免旧账号卡牌仓库写入新账号目录。
+    /// </summary>
+    public static void ClearCache()
+    {
+        lock (FileLock)
+        {
+            _cached = new CardCollectionData();
+            _hasLoadedForCurrentUser = false;
+        }
     }
 
     /// <summary>
@@ -271,15 +303,13 @@ public static class CardCollectionStore
         return data;
     }
 
-    private static string GetDataFolderPath()
+    /// <summary>
+    /// 获取当前登录账号下的卡牌仓库文件路径。
+    /// </summary>
+    private static bool TryGetEncryptedFilePath(out string filePath, bool createFolder = false)
     {
-        var dataPath = Application.dataPath;
-        var gameRoot = Directory.GetParent(dataPath)?.FullName;
-        if (string.IsNullOrEmpty(gameRoot)) gameRoot = dataPath;
-        return Path.Combine(gameRoot, DataFolderName);
+        return LocalUserDataPaths.TryGetCurrentAccountDataFilePath(DataFileName, out filePath, createFolder);
     }
-
-    private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
 
     #endregion
 }
