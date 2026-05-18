@@ -13,8 +13,13 @@ public static class GameDataSaveService
     /// </summary>
     public static void SaveAll()
     {
-        // 账号数据在每次操作时已落盘，这里读取一次可触发文件校验流程。
-        _ = AccountStore.GetCurrentUser();
+        var currentUser = AccountStore.GetCurrentUser();
+        if (string.IsNullOrWhiteSpace(currentUser))
+        {
+            Debug.Log("[GameDataSaveService] 当前没有登录账号，跳过进度自动保存。");
+            return;
+        }
+
         CurrencyStore.SaveCurrent();
         InventoryStore.SaveCurrent();
         CardCollectionStore.SaveCurrent();

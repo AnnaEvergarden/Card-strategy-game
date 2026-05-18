@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Game.Common.Save;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -12,11 +13,6 @@ public static class InventoryStore
     #region Fields
 
     /// <summary>
-    /// 仓库数据文件夹名。
-    /// </summary>
-    private const string DataFolderName = "UserData";
-
-    /// <summary>
     /// 加密后的仓库数据文件名。
     /// </summary>
     private const string DataFileName = "inventory.dat";
@@ -25,6 +21,16 @@ public static class InventoryStore
     /// 最近一次加载或保存的仓库缓存。
     /// </summary>
     private static InventoryData _cachedData = new();
+
+    /// <summary>
+    /// 当前缓存所属的账号目录键，用于账号切换时阻止串档保存。
+    /// </summary>
+    private static string _cachedOwnerKey = string.Empty;
+
+    /// <summary>
+    /// 当前缓存是否允许自动保存；读档失败时为 false。
+    /// </summary>
+    private static bool _canSaveCurrent;
 
     /// <summary>
     /// 文件读写锁。
@@ -80,16 +86,23 @@ public static class InventoryStore
     {
         lock (FileLock)
         {
+            if (!LocalUserDataPaths.TryGetCurrentUserDataFilePath(DataFileName, out var ownerKey, out var encryptedPath))
+            {
+                ResetCacheForOwner(string.Empty);
+                Debug.LogWarning("[InventoryStore] 当前没有登录账号，跳过仓库读档。");
+                return _cachedData;
+            }
+
+            ResetCacheForOwner(ownerKey);
             try
             {
-                var encryptedPath = GetEncryptedFilePath();
-
                 if (File.Exists(encryptedPath))
                 {
                     var bytes = File.ReadAllBytes(encryptedPath);
                     if (bytes == null || bytes.Length <= 16)
                     {
                         _cachedData = new InventoryData();
+                        _canSaveCurrent = false;
                         return _cachedData;
                     }
 
@@ -97,21 +110,25 @@ public static class InventoryStore
                     if (string.IsNullOrWhiteSpace(json))
                     {
                         _cachedData = new InventoryData();
+                        _canSaveCurrent = false;
                         return _cachedData;
                     }
 
                     var data = JsonUtility.FromJson<InventoryData>(json);
                     _cachedData = data ?? new InventoryData();
+                    _canSaveCurrent = true;
                     return _cachedData;
                 }
 
                 _cachedData = new InventoryData();
+                _canSaveCurrent = true;
                 return _cachedData;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Load inventory failed: {ex.Message}");
                 _cachedData = new InventoryData();
+                _canSaveCurrent = false;
                 return _cachedData;
             }
         }
@@ -124,18 +141,21 @@ public static class InventoryStore
     {
         lock (FileLock)
         {
+            if (!LocalUserDataPaths.TryGetCurrentUserDataFilePath(DataFileName, out var ownerKey, out var encryptedPath))
+            {
+                Debug.LogWarning("[InventoryStore] 当前没有登录账号，跳过仓库保存。");
+                return;
+            }
+
+            ResetCacheForOwner(ownerKey);
             try
             {
-                var folder = GetDataFolderPath();
-                if (!Directory.Exists(folder))
-                {
-                    Directory.CreateDirectory(folder);
-                }
-
+                LocalUserDataPaths.EnsureParentDirectory(encryptedPath);
                 _cachedData = data ?? new InventoryData();
                 var json = JsonUtility.ToJson(_cachedData, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                File.WriteAllBytes(encryptedPath, encrypted);
+                _canSaveCurrent = true;
             }
             catch (Exception ex)
             {
@@ -149,6 +169,18 @@ public static class InventoryStore
     /// </summary>
     public static void SaveCurrent()
     {
+        if (!LocalUserDataPaths.TryGetCurrentUserDataFilePath(DataFileName, out var ownerKey, out _))
+        {
+            Debug.LogWarning("[InventoryStore] 当前没有登录账号，跳过仓库自动保存。");
+            return;
+        }
+
+        if (!string.Equals(_cachedOwnerKey, ownerKey, StringComparison.Ordinal) || !_canSaveCurrent)
+        {
+            Debug.LogWarning("[InventoryStore] 仓库缓存未成功加载或账号已切换，跳过自动保存以避免覆盖存档。");
+            return;
+        }
+
         Save(_cachedData ?? new InventoryData());
     }
 
@@ -165,6 +197,12 @@ public static class InventoryStore
         lock (FileLock)
         {
             Load();
+            if (!_canSaveCurrent)
+            {
+                Debug.LogWarning("[InventoryStore] 仓库读档失败，拒绝增加道具以避免覆盖原存档。");
+                return;
+            }
+
             _cachedData.items ??= new List<InventoryItemData>();
             var id = itemId.Trim();
             for (var i = 0; i < _cachedData.items.Count; i++)
@@ -207,6 +245,12 @@ public static class InventoryStore
         lock (FileLock)
         {
             Load();
+            if (!_canSaveCurrent)
+            {
+                Debug.LogWarning("[InventoryStore] 仓库读档失败，拒绝消耗道具以避免产生无法保存的状态。");
+                return false;
+            }
+
             _cachedData.items ??= new List<InventoryItemData>();
             var id = itemId.Trim();
             for (var i = 0; i < _cachedData.items.Count; i++)
@@ -250,6 +294,12 @@ public static class InventoryStore
         lock (FileLock)
         {
             Load();
+            if (!_canSaveCurrent)
+            {
+                Debug.LogWarning("[InventoryStore] 仓库读档失败，拒绝删除道具以避免覆盖原存档。");
+                return false;
+            }
+
             _cachedData.items ??= new List<InventoryItemData>();
             var id = itemId.Trim();
             for (var i = 0; i < _cachedData.items.Count; i++)
@@ -272,17 +322,20 @@ public static class InventoryStore
     #region Private Methods
 
     /// <summary>
-    /// 获取仓库数据目录（游戏根目录/UserData）。
+    /// 账号切换时重置仓库缓存状态，避免旧账号数据写入新账号目录。
     /// </summary>
-    private static string GetDataFolderPath()
+    private static void ResetCacheForOwner(string ownerKey)
     {
-        var dataPath = Application.dataPath;
-        var gameRootPath = Directory.GetParent(dataPath)?.FullName;
-        if (string.IsNullOrEmpty(gameRootPath)) gameRootPath = dataPath;
-        return Path.Combine(gameRootPath, DataFolderName);
-    }
+        ownerKey ??= string.Empty;
+        if (string.Equals(_cachedOwnerKey, ownerKey, StringComparison.Ordinal))
+        {
+            return;
+        }
 
-    private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+        _cachedOwnerKey = ownerKey;
+        _cachedData = new InventoryData();
+        _canSaveCurrent = false;
+    }
 
     #endregion
 }
