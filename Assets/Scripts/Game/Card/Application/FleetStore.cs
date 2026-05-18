@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Game.Common.Save;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -10,11 +11,6 @@ using UnityEngine;
 public static class FleetStore
 {
     #region Fields
-
-    /// <summary>
-    /// 数据目录名（与账号、卡牌仓库一致）。
-    /// </summary>
-    private const string DataFolderName = "UserData";
 
     /// <summary>
     /// 编队数据文件名。
@@ -30,6 +26,16 @@ public static class FleetStore
     /// 内存缓存。
     /// </summary>
     private static FleetData _cached = new();
+
+    /// <summary>
+    /// 当前缓存所属的账号目录键，用于账号切换时阻止串档保存。
+    /// </summary>
+    private static string _cachedOwnerKey = string.Empty;
+
+    /// <summary>
+    /// 当前缓存是否允许自动保存；读档失败时保持 false。
+    /// </summary>
+    private static bool _canSaveCurrent;
 
     /// <summary>
     /// 文件读写锁。
@@ -80,9 +86,16 @@ public static class FleetStore
     {
         lock (FileLock)
         {
+            if (!LocalUserDataPaths.TryGetCurrentUserDataFilePath(DataFileName, out var ownerKey, out var encryptedPath))
+            {
+                ResetCacheForOwner(string.Empty);
+                Debug.LogWarning("[FleetStore] 当前没有登录账号，跳过编队读档。");
+                return _cached;
+            }
+
+            ResetCacheForOwner(ownerKey);
             try
             {
-                var encryptedPath = GetEncryptedFilePath();
                 if (File.Exists(encryptedPath))
                 {
                     var bytes = File.ReadAllBytes(encryptedPath);
@@ -94,18 +107,25 @@ public static class FleetStore
                             var data = JsonUtility.FromJson<FleetData>(json);
                             _cached = data ?? new FleetData();
                             Normalize(_cached);
+                            _canSaveCurrent = true;
                             return _cached;
                         }
                     }
+
+                    _cached = CreateDefaultFromCollection();
+                    _canSaveCurrent = false;
+                    return _cached;
                 }
 
                 _cached = CreateDefaultFromCollection();
+                _canSaveCurrent = true;
                 return _cached;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Load fleet data failed: {ex.Message}");
                 _cached = CreateDefaultFromCollection();
+                _canSaveCurrent = false;
                 return _cached;
             }
         }
@@ -118,19 +138,22 @@ public static class FleetStore
     {
         lock (FileLock)
         {
+            if (!LocalUserDataPaths.TryGetCurrentUserDataFilePath(DataFileName, out var ownerKey, out var encryptedPath))
+            {
+                Debug.LogWarning("[FleetStore] 当前没有登录账号，跳过编队保存。");
+                return;
+            }
+
+            ResetCacheForOwner(ownerKey);
             try
             {
-                var folder = GetDataFolderPath();
-                if (!Directory.Exists(folder))
-                {
-                    Directory.CreateDirectory(folder);
-                }
-
+                LocalUserDataPaths.EnsureParentDirectory(encryptedPath);
                 _cached = data ?? new FleetData();
                 Normalize(_cached);
                 var json = JsonUtility.ToJson(_cached, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                File.WriteAllBytes(encryptedPath, encrypted);
+                _canSaveCurrent = true;
             }
             catch (Exception ex)
             {
@@ -144,6 +167,18 @@ public static class FleetStore
     /// </summary>
     public static void SaveCurrent()
     {
+        if (!LocalUserDataPaths.TryGetCurrentUserDataFilePath(DataFileName, out var ownerKey, out _))
+        {
+            Debug.LogWarning("[FleetStore] 当前没有登录账号，跳过编队自动保存。");
+            return;
+        }
+
+        if (!string.Equals(_cachedOwnerKey, ownerKey, StringComparison.Ordinal) || !_canSaveCurrent)
+        {
+            Debug.LogWarning("[FleetStore] 编队缓存未成功加载或账号已切换，跳过自动保存以避免覆盖存档。");
+            return;
+        }
+
         Save(_cached ?? new FleetData());
     }
 
@@ -213,19 +248,21 @@ public static class FleetStore
         return data;
     }
 
-    private static string GetDataFolderPath()
+    /// <summary>
+    /// 账号切换时重置编队缓存状态，避免旧账号数据写入新账号目录。
+    /// </summary>
+    private static void ResetCacheForOwner(string ownerKey)
     {
-        var dataPath = Application.dataPath;
-        var gameRoot = Directory.GetParent(dataPath)?.FullName;
-        if (string.IsNullOrEmpty(gameRoot))
+        ownerKey ??= string.Empty;
+        if (string.Equals(_cachedOwnerKey, ownerKey, StringComparison.Ordinal))
         {
-            gameRoot = dataPath;
+            return;
         }
 
-        return Path.Combine(gameRoot, DataFolderName);
+        _cachedOwnerKey = ownerKey;
+        _cached = new FleetData();
+        _canSaveCurrent = false;
     }
-
-    private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
 
     #endregion
 }

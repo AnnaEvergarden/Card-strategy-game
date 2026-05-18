@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Game.Common.Save;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -14,15 +15,13 @@ namespace Game.Common.Auth
         #region Keys
 
         /// <summary>
-        /// 本地数据文件夹名。
-        /// </summary>
-        private const string DataFolderName = "UserData";
-
-        /// <summary>
-        /// 账号数据文件名（加密二进制）。
+        /// 账号数据文件名（加密二进制），所有账号共享这一份账号库。
         /// </summary>
         private const string DataFileName = "account.dat";
 
+        /// <summary>
+        /// 账号库文件读写锁。
+        /// </summary>
         private static readonly object FileLock = new();
 
         #endregion
@@ -243,15 +242,11 @@ namespace Game.Common.Auth
             {
                 try
                 {
-                    var folderPath = GetDataFolderPath();
-                    if (!Directory.Exists(folderPath))
-                    {
-                        Directory.CreateDirectory(folderPath);
-                    }
-
+                    var filePath = GetDataFilePath();
+                    LocalUserDataPaths.EnsureParentDirectory(filePath);
                     var json = JsonUtility.ToJson(db);
                     var encryptedBytes = LocalDataCrypto.EncryptUtf8(json);
-                    File.WriteAllBytes(GetDataFilePath(), encryptedBytes);
+                    File.WriteAllBytes(filePath, encryptedBytes);
                 }
                 catch (Exception ex)
                 {
@@ -276,20 +271,9 @@ namespace Game.Common.Auth
         }
 
         /// <summary>
-        /// 获取本地数据文件夹路径（游戏根目录/UserData）。
-        /// </summary>
-        private static string GetDataFolderPath()
-        {
-            var dataPath = Application.dataPath;
-            var gameRootPath = Directory.GetParent(dataPath)?.FullName;
-            if (string.IsNullOrEmpty(gameRootPath)) gameRootPath = dataPath;
-            return Path.Combine(gameRootPath, DataFolderName);
-        }
-
-        /// <summary>
         /// 获取账号数据文件完整路径。
         /// </summary>
-        private static string GetDataFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+        private static string GetDataFilePath() => LocalUserDataPaths.GetSharedDataFilePath(DataFileName);
 
         #endregion
     }

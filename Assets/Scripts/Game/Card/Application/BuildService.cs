@@ -107,8 +107,15 @@ public static class BuildService
             }
 
             id = id.Trim();
+            if (!CardCollectionStore.AddCards(id, 1))
+            {
+                RollbackAddedCards(ids);
+                CurrencyStore.Add(gold, diamond, ticket);
+                error = "卡牌仓库无法保存，本次建造已取消。";
+                return false;
+            }
+
             ids.Add(id);
-            CardCollectionStore.AddCards(id, 1);
         }
 
         if (ids.Count == 0)
@@ -204,6 +211,25 @@ public static class BuildService
         return null;
     }
 
+    /// <summary>
+    /// 建造中途失败时回滚已经加入仓库的卡牌，避免资源和卡牌不一致。
+    /// </summary>
+    private static void RollbackAddedCards(List<string> cardIds)
+    {
+        if (cardIds == null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < cardIds.Count; i++)
+        {
+            CardCollectionStore.TryConsumeCards(cardIds[i], 1);
+        }
+    }
+
+    /// <summary>
+    /// 根据卡池 id 查找配置。
+    /// </summary>
     private static BuildPoolConfigSO FindPool(string poolId)
     {
         if (_db == null || string.IsNullOrWhiteSpace(poolId))
@@ -229,6 +255,9 @@ public static class BuildService
         return null;
     }
 
+    /// <summary>
+    /// 确保卡池数据库已从 Resources 加载。
+    /// </summary>
     private static void EnsureDatabase()
     {
         if (_db != null)
