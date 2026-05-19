@@ -12,11 +12,6 @@ public static class FleetStore
     #region Fields
 
     /// <summary>
-    /// 数据目录名（与账号、卡牌仓库一致）。
-    /// </summary>
-    private const string DataFolderName = "UserData";
-
-    /// <summary>
     /// 编队数据文件名。
     /// </summary>
     private const string DataFileName = "fleet_data.dat";
@@ -30,6 +25,11 @@ public static class FleetStore
     /// 内存缓存。
     /// </summary>
     private static FleetData _cached = new();
+
+    /// <summary>
+    /// 上一次读取是否失败；失败时禁止保存默认编队覆盖原文件。
+    /// </summary>
+    private static bool _saveBlocked;
 
     /// <summary>
     /// 文件读写锁。
@@ -74,7 +74,7 @@ public static class FleetStore
     #region Public API
 
     /// <summary>
-    /// 读取编队数据；若文件不存在则基于玩家卡牌仓库自动生成默认第一套卡组。
+    /// 读取当前账号编队数据；若文件不存在则基于玩家卡牌仓库自动生成默认第一套卡组。
     /// </summary>
     public static FleetData Load()
     {
@@ -82,7 +82,11 @@ public static class FleetStore
         {
             try
             {
-                var encryptedPath = GetEncryptedFilePath();
+                if (!TryGetEncryptedFilePath(out var encryptedPath))
+                {
+                    return MarkLoadFailed(new FleetData(), "Load fleet data skipped: 当前没有登录账号。");
+                }
+
                 if (File.Exists(encryptedPath))
                 {
                     var bytes = File.ReadAllBytes(encryptedPath);
@@ -94,19 +98,21 @@ public static class FleetStore
                             var data = JsonUtility.FromJson<FleetData>(json);
                             _cached = data ?? new FleetData();
                             Normalize(_cached);
+                            _saveBlocked = false;
                             return _cached;
                         }
                     }
+
+                    return MarkLoadFailed(CreateDefaultFromCollection(), "Load fleet data failed: 编队存档文件无效或解密为空。");
                 }
 
                 _cached = CreateDefaultFromCollection();
+                _saveBlocked = false;
                 return _cached;
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"Load fleet data failed: {ex.Message}");
-                _cached = CreateDefaultFromCollection();
-                return _cached;
+                return MarkLoadFailed(CreateDefaultFromCollection(), $"Load fleet data failed: {ex.Message}");
             }
         }
     }
@@ -120,7 +126,18 @@ public static class FleetStore
         {
             try
             {
-                var folder = GetDataFolderPath();
+                if (_saveBlocked)
+                {
+                    Debug.LogError("Save fleet data skipped: 上一次读取编队存档失败，禁止覆盖原文件。");
+                    return;
+                }
+
+                if (!TryGetDataFolderPath(out var folder))
+                {
+                    Debug.LogWarning("Save fleet data skipped: 当前没有登录账号。");
+                    return;
+                }
+
                 if (!Directory.Exists(folder))
                 {
                     Directory.CreateDirectory(folder);
@@ -130,7 +147,10 @@ public static class FleetStore
                 Normalize(_cached);
                 var json = JsonUtility.ToJson(_cached, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                if (TryGetEncryptedFilePath(out var filePath))
+                {
+                    File.WriteAllBytes(filePath, encrypted);
+                }
             }
             catch (Exception ex)
             {
@@ -145,6 +165,18 @@ public static class FleetStore
     public static void SaveCurrent()
     {
         Save(_cached ?? new FleetData());
+    }
+
+    /// <summary>
+    /// 清理运行时缓存；账号切换后必须先清理，避免旧账号编队写入新账号目录。
+    /// </summary>
+    public static void ClearCache()
+    {
+        lock (FileLock)
+        {
+            _cached = new FleetData();
+            _saveBlocked = true;
+        }
     }
 
     #endregion
@@ -213,19 +245,35 @@ public static class FleetStore
         return data;
     }
 
-    private static string GetDataFolderPath()
+    /// <summary>
+    /// 标记读取失败并返回安全默认值；后续保存会被阻止，避免数据丢失。
+    /// </summary>
+    /// <param name="fallback">返回给调用方的默认数据。</param>
+    /// <param name="message">失败原因。</param>
+    private static FleetData MarkLoadFailed(FleetData fallback, string message)
     {
-        var dataPath = Application.dataPath;
-        var gameRoot = Directory.GetParent(dataPath)?.FullName;
-        if (string.IsNullOrEmpty(gameRoot))
-        {
-            gameRoot = dataPath;
-        }
-
-        return Path.Combine(gameRoot, DataFolderName);
+        Debug.LogWarning(message);
+        _cached = fallback ?? new FleetData();
+        Normalize(_cached);
+        _saveBlocked = true;
+        return _cached;
     }
 
-    private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+    /// <summary>
+    /// 尝试获取当前账号的编队数据目录。
+    /// </summary>
+    private static bool TryGetDataFolderPath(out string folderPath)
+    {
+        return LocalSavePath.TryGetCurrentAccountDataFolderPath(out folderPath);
+    }
+
+    /// <summary>
+    /// 尝试获取当前账号的编队数据文件路径。
+    /// </summary>
+    private static bool TryGetEncryptedFilePath(out string filePath)
+    {
+        return LocalSavePath.TryGetCurrentAccountDataFilePath(DataFileName, out filePath);
+    }
 
     #endregion
 }

@@ -76,11 +76,13 @@ public sealed class TitlePanel : BasePanel
     }
 
     /// <summary>
-    /// 点击退出账号按钮：清除当前登录账号。
+    /// 点击退出账号按钮：先保存当前账号进度，再清除登录状态和运行时缓存。
     /// </summary>
     public void OnClickLogout()
     {
+        GameDataSaveService.SaveAll();
         Game.Common.Auth.AccountStore.Logout();
+        GameDataSaveService.ClearCachedGameData();
     }
 
     /// <summary>
@@ -128,4 +130,3 @@ public sealed class TitlePanel : BasePanel
 
     #endregion
 }
-
