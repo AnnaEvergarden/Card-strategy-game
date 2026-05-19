@@ -14,15 +14,18 @@ namespace Game.Common.Auth
         #region Keys
 
         /// <summary>
-        /// 本地数据文件夹名。
-        /// </summary>
-        private const string DataFolderName = "UserData";
-
-        /// <summary>
         /// 账号数据文件名（加密二进制）。
         /// </summary>
         private const string DataFileName = "account.dat";
 
+        /// <summary>
+        /// 最近一次读取账号库是否失败；失败后禁止保存空库覆盖原文件。
+        /// </summary>
+        private static bool _dbLoadFailed;
+
+        /// <summary>
+        /// 账号库文件读写锁。
+        /// </summary>
         private static readonly object FileLock = new();
 
         #endregion
@@ -98,6 +101,7 @@ namespace Game.Common.Auth
             }
 
             var db = LoadDb();
+            db.accounts ??= new List<AccountEntry>();
             if (Find(db, user) != null)
             {
                 error = "账号已存在";
@@ -105,7 +109,12 @@ namespace Game.Common.Auth
             }
 
             db.accounts.Add(new AccountEntry { user = user, pass = pass });
-            SaveDb(db);
+            if (!SaveDb(db))
+            {
+                error = "账号数据保存失败";
+                return false;
+            }
+
             return true;
         }
 
@@ -133,8 +142,13 @@ namespace Game.Common.Auth
             }
 
             db.currentUser = user;
-            SaveDb(db);
-            return true;
+            if (SaveDb(db))
+            {
+                return true;
+            }
+
+            error = "账号登录状态保存失败";
+            return false;
         }
 
         /// <summary>
@@ -144,7 +158,7 @@ namespace Game.Common.Auth
         {
             var db = LoadDb();
             db.currentUser = string.Empty;
-            SaveDb(db);
+            _ = SaveDb(db);
         }
 
         /// <summary>
@@ -168,7 +182,8 @@ namespace Game.Common.Auth
                 db.rememberUser = string.Empty;
                 db.rememberPass = string.Empty;
             }
-            SaveDb(db);
+
+            _ = SaveDb(db);
         }
 
         /// <summary>
@@ -190,7 +205,7 @@ namespace Game.Common.Auth
 
             db.rememberUser = (user ?? string.Empty).Trim();
             db.rememberPass = pass ?? string.Empty;
-            SaveDb(db);
+            _ = SaveDb(db);
         }
 
         /// <summary>
@@ -208,54 +223,87 @@ namespace Game.Common.Auth
         #region Private Methods
 
         /// <summary>
-        /// 从本地读取账号数据库。
+        /// 从本地读取账号数据库；读取失败时仅返回空对象并阻止后续保存覆盖原文件。
         /// </summary>
         private static AccountDb LoadDb()
         {
             lock (FileLock)
             {
                 var filePath = GetDataFilePath();
-                if (!File.Exists(filePath)) return new AccountDb();
+                if (!File.Exists(filePath))
+                {
+                    _dbLoadFailed = false;
+                    return new AccountDb();
+                }
 
                 try
                 {
                     var encryptedBytes = File.ReadAllBytes(filePath);
-                    if (encryptedBytes == null || encryptedBytes.Length <= 16) return new AccountDb();
+                    if (encryptedBytes == null || encryptedBytes.Length <= 16)
+                    {
+                        MarkDbLoadFailed("账号库文件过短或为空");
+                        return new AccountDb();
+                    }
 
                     var json = LocalDataCrypto.DecryptToUtf8(encryptedBytes);
+                    if (string.IsNullOrWhiteSpace(json))
+                    {
+                        MarkDbLoadFailed("账号库解密结果为空");
+                        return new AccountDb();
+                    }
+
                     var db = JsonUtility.FromJson<AccountDb>(json);
-                    return db ?? new AccountDb();
+                    if (db == null)
+                    {
+                        MarkDbLoadFailed("账号库 JSON 解析失败");
+                        return new AccountDb();
+                    }
+
+                    db.accounts ??= new List<AccountEntry>();
+                    _dbLoadFailed = false;
+                    return db;
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"Load account db failed: {ex.Message}");
+                    MarkDbLoadFailed($"Load account db failed: {ex.Message}");
                     return new AccountDb();
                 }
             }
         }
 
         /// <summary>
-        /// 将账号数据库写入本地。
+        /// 将账号数据库写入本地；若刚发生读取失败则拒绝覆盖原账号库。
         /// </summary>
-        private static void SaveDb(AccountDb db)
+        private static bool SaveDb(AccountDb db)
         {
             lock (FileLock)
             {
                 try
                 {
+                    if (_dbLoadFailed && File.Exists(GetDataFilePath()))
+                    {
+                        Debug.LogError("Save account db skipped: 上一次读取账号库失败，禁止用空数据覆盖原文件。");
+                        return false;
+                    }
+
                     var folderPath = GetDataFolderPath();
                     if (!Directory.Exists(folderPath))
                     {
                         Directory.CreateDirectory(folderPath);
                     }
 
+                    db ??= new AccountDb();
+                    db.accounts ??= new List<AccountEntry>();
                     var json = JsonUtility.ToJson(db);
                     var encryptedBytes = LocalDataCrypto.EncryptUtf8(json);
                     File.WriteAllBytes(GetDataFilePath(), encryptedBytes);
+                    _dbLoadFailed = false;
+                    return true;
                 }
                 catch (Exception ex)
                 {
                     Debug.LogError($"Save account db failed: {ex.Message}");
+                    return false;
                 }
             }
         }
@@ -276,22 +324,28 @@ namespace Game.Common.Auth
         }
 
         /// <summary>
-        /// 获取本地数据文件夹路径（游戏根目录/UserData）。
+        /// 标记账号库读取失败，并保留原文件等待人工或后续恢复处理。
+        /// </summary>
+        /// <param name="message">失败原因。</param>
+        private static void MarkDbLoadFailed(string message)
+        {
+            _dbLoadFailed = true;
+            Debug.LogWarning(message);
+        }
+
+        /// <summary>
+        /// 获取全局本地数据文件夹路径（persistentDataPath/UserData）。
         /// </summary>
         private static string GetDataFolderPath()
         {
-            var dataPath = Application.dataPath;
-            var gameRootPath = Directory.GetParent(dataPath)?.FullName;
-            if (string.IsNullOrEmpty(gameRootPath)) gameRootPath = dataPath;
-            return Path.Combine(gameRootPath, DataFolderName);
+            return global::LocalSavePath.GetGlobalDataFolderPath();
         }
 
         /// <summary>
         /// 获取账号数据文件完整路径。
         /// </summary>
-        private static string GetDataFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+        private static string GetDataFilePath() => global::LocalSavePath.GetGlobalDataFilePath(DataFileName);
 
         #endregion
     }
 }
-

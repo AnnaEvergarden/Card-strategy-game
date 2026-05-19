@@ -98,22 +98,23 @@ public sealed class LoginPanel : BasePanel
     }
 
     /// <summary>
-    /// 点击登录按钮：校验成功后保存记住密码并进入游戏场景。
+    /// 点击登录按钮：校验成功后清理旧缓存、保存记住密码并进入游戏场景。
     /// </summary>
     public void OnClickLogin()
     {
         var user = userNameInput != null ? userNameInput.text : string.Empty;
         var pass = passwordInput != null ? passwordInput.text : string.Empty;
 
-        if (_rememberToggle != null)
-        {
-            AccountStore.SetRememberEnabled(_rememberToggle.isOn);
-        }
-
         if (!AccountStore.TryLogin(user, pass, out var error))
         {
             Debug.LogWarning($"Login failed: {error}");
             return;
+        }
+
+        GameDataSaveService.ClearCachedGameData();
+        if (_rememberToggle != null)
+        {
+            AccountStore.SetRememberEnabled(_rememberToggle.isOn);
         }
 
         AccountStore.SaveRememberedCredentials(user, pass);
@@ -146,4 +147,3 @@ public sealed class LoginPanel : BasePanel
 
     #endregion
 }
-

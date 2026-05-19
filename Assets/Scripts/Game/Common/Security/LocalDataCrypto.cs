@@ -29,7 +29,7 @@ namespace Game.Common.Security
         public static byte[] EncryptUtf8(string plainText)
         {
             var plainBytes = Encoding.UTF8.GetBytes(plainText ?? string.Empty);
-            var key = BuildAesKey();
+            var key = BuildCurrentAesKey();
 
             using var aes = Aes.Create();
             aes.Key = key;
@@ -58,23 +58,18 @@ namespace Game.Common.Security
                 return string.Empty;
             }
 
-            var key = BuildAesKey();
-            var iv = new byte[16];
-            Buffer.BlockCopy(encryptedBytes, 0, iv, 0, iv.Length);
+            if (TryDecryptToUtf8(encryptedBytes, BuildCurrentAesKey(), out var plainText))
+            {
+                return plainText;
+            }
 
-            var cipherLength = encryptedBytes.Length - iv.Length;
-            var cipherBytes = new byte[cipherLength];
-            Buffer.BlockCopy(encryptedBytes, iv.Length, cipherBytes, 0, cipherLength);
+            // 兼容旧版本按 deviceUniqueIdentifier 派生的密钥；成功读取后下一次保存会迁移到稳定密钥。
+            if (TryDecryptToUtf8(encryptedBytes, BuildLegacyDeviceAesKey(), out plainText))
+            {
+                return plainText;
+            }
 
-            using var aes = Aes.Create();
-            aes.Key = key;
-            aes.IV = iv;
-            aes.Mode = CipherMode.CBC;
-            aes.Padding = PaddingMode.PKCS7;
-
-            using var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
-            var plainBytes = decryptor.TransformFinalBlock(cipherBytes, 0, cipherBytes.Length);
-            return Encoding.UTF8.GetString(plainBytes);
+            return string.Empty;
         }
 
         #endregion
@@ -82,15 +77,65 @@ namespace Game.Common.Security
         #region Private Methods
 
         /// <summary>
-        /// 基于项目种子与 <see cref="UnityEngine.SystemInfo.deviceUniqueIdentifier"/> 生成 256 位 AES 密钥（SHA256）。
+        /// 基于项目固定种子生成 256 位 AES 密钥（SHA256），避免设备标识变化导致旧档不可读。
         /// </summary>
         /// <returns>32 字节密钥。</returns>
-        private static byte[] BuildAesKey()
+        private static byte[] BuildCurrentAesKey()
+        {
+            var raw = Encoding.UTF8.GetBytes(KeySeed);
+            using var sha = SHA256.Create();
+            return sha.ComputeHash(raw);
+        }
+
+        /// <summary>
+        /// 构建旧版本设备绑定密钥，仅用于读取和迁移既有文件。
+        /// </summary>
+        /// <returns>32 字节密钥。</returns>
+        private static byte[] BuildLegacyDeviceAesKey()
         {
             var deviceId = SystemInfo.deviceUniqueIdentifier ?? "unknown-device";
             var raw = Encoding.UTF8.GetBytes($"{KeySeed}:{deviceId}");
             using var sha = SHA256.Create();
             return sha.ComputeHash(raw);
+        }
+
+        /// <summary>
+        /// 使用指定密钥尝试解密 AES-CBC 数据。
+        /// </summary>
+        /// <param name="encryptedBytes">含 IV 前缀的密文字节。</param>
+        /// <param name="key">32 字节 AES 密钥。</param>
+        /// <param name="plainText">解密出的 UTF-8 明文。</param>
+        private static bool TryDecryptToUtf8(byte[] encryptedBytes, byte[] key, out string plainText)
+        {
+            plainText = string.Empty;
+            try
+            {
+                var iv = new byte[16];
+                Buffer.BlockCopy(encryptedBytes, 0, iv, 0, iv.Length);
+
+                var cipherLength = encryptedBytes.Length - iv.Length;
+                var cipherBytes = new byte[cipherLength];
+                Buffer.BlockCopy(encryptedBytes, iv.Length, cipherBytes, 0, cipherLength);
+
+                using var aes = Aes.Create();
+                aes.Key = key;
+                aes.IV = iv;
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.PKCS7;
+
+                using var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+                var plainBytes = decryptor.TransformFinalBlock(cipherBytes, 0, cipherBytes.Length);
+                plainText = Encoding.UTF8.GetString(plainBytes);
+                return true;
+            }
+            catch (CryptographicException)
+            {
+                return false;
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
         }
 
         #endregion
