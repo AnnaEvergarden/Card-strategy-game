@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Game.Common.Save;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -12,11 +13,6 @@ namespace Game.Common.Auth
     public static class AccountStore
     {
         #region Keys
-
-        /// <summary>
-        /// 本地数据文件夹名。
-        /// </summary>
-        private const string DataFolderName = "UserData";
 
         /// <summary>
         /// 账号数据文件名（加密二进制）。
@@ -215,22 +211,54 @@ namespace Game.Common.Auth
             lock (FileLock)
             {
                 var filePath = GetDataFilePath();
-                if (!File.Exists(filePath)) return new AccountDb();
-
-                try
+                if (TryLoadDbFromFile(filePath, out var db))
                 {
-                    var encryptedBytes = File.ReadAllBytes(filePath);
-                    if (encryptedBytes == null || encryptedBytes.Length <= 16) return new AccountDb();
-
-                    var json = LocalDataCrypto.DecryptToUtf8(encryptedBytes);
-                    var db = JsonUtility.FromJson<AccountDb>(json);
-                    return db ?? new AccountDb();
+                    return db;
                 }
-                catch (Exception ex)
+
+                if (File.Exists(filePath))
                 {
-                    Debug.LogWarning($"Load account db failed: {ex.Message}");
+                    Debug.LogWarning($"Load account db failed: {filePath}");
                     return new AccountDb();
                 }
+
+                var legacyPath = LocalUserDataPaths.GetLegacySharedDataFilePath(DataFileName);
+                if (TryLoadDbFromFile(legacyPath, out db))
+                {
+                    SaveDb(db);
+                    return db;
+                }
+
+                return new AccountDb();
+            }
+        }
+
+        /// <summary>
+        /// 尝试从指定文件读取账号数据库。
+        /// </summary>
+        private static bool TryLoadDbFromFile(string filePath, out AccountDb db)
+        {
+            db = null;
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            {
+                return false;
+            }
+
+            try
+            {
+                var encryptedBytes = File.ReadAllBytes(filePath);
+                if (encryptedBytes == null || encryptedBytes.Length <= 16) return false;
+
+                var json = LocalDataCrypto.DecryptToUtf8(encryptedBytes);
+                if (string.IsNullOrWhiteSpace(json)) return false;
+
+                db = JsonUtility.FromJson<AccountDb>(json);
+                return db != null;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"Load account db failed: {ex.Message}");
+                return false;
             }
         }
 
@@ -276,20 +304,14 @@ namespace Game.Common.Auth
         }
 
         /// <summary>
-        /// 获取本地数据文件夹路径（游戏根目录/UserData）。
+        /// 获取本地共享账号数据文件夹路径。
         /// </summary>
-        private static string GetDataFolderPath()
-        {
-            var dataPath = Application.dataPath;
-            var gameRootPath = Directory.GetParent(dataPath)?.FullName;
-            if (string.IsNullOrEmpty(gameRootPath)) gameRootPath = dataPath;
-            return Path.Combine(gameRootPath, DataFolderName);
-        }
+        private static string GetDataFolderPath() => LocalUserDataPaths.GetSharedDataFolderPath();
 
         /// <summary>
         /// 获取账号数据文件完整路径。
         /// </summary>
-        private static string GetDataFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+        private static string GetDataFilePath() => LocalUserDataPaths.GetSharedDataFilePath(DataFileName);
 
         #endregion
     }
