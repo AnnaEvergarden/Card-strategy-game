@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Game.Common.Save;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -12,11 +13,6 @@ public static class InventoryStore
     #region Fields
 
     /// <summary>
-    /// 仓库数据文件夹名。
-    /// </summary>
-    private const string DataFolderName = "UserData";
-
-    /// <summary>
     /// 加密后的仓库数据文件名。
     /// </summary>
     private const string DataFileName = "inventory.dat";
@@ -25,6 +21,16 @@ public static class InventoryStore
     /// 最近一次加载或保存的仓库缓存。
     /// </summary>
     private static InventoryData _cachedData = new();
+
+    /// <summary>
+    /// 当前缓存所属账号键，用于防止切号后把旧缓存写入新账号。
+    /// </summary>
+    private static string _cachedOwnerKey = string.Empty;
+
+    /// <summary>
+    /// 当前缓存是否来自可安全保存的账号进度。
+    /// </summary>
+    private static bool _canSaveCurrent;
 
     /// <summary>
     /// 文件读写锁。
@@ -80,38 +86,36 @@ public static class InventoryStore
     {
         lock (FileLock)
         {
+            if (!LocalUserDataPaths.TryGetCurrentUserProgressFilePath(DataFileName, out var encryptedPath, out var ownerKey))
+            {
+                SetCache(new InventoryData(), string.Empty, false);
+                return _cachedData;
+            }
+
             try
             {
-                var encryptedPath = GetEncryptedFilePath();
-
-                if (File.Exists(encryptedPath))
+                if (TryLoadFromFile(encryptedPath, out var data))
                 {
-                    var bytes = File.ReadAllBytes(encryptedPath);
-                    if (bytes == null || bytes.Length <= 16)
-                    {
-                        _cachedData = new InventoryData();
-                        return _cachedData;
-                    }
-
-                    var json = LocalDataCrypto.DecryptToUtf8(bytes);
-                    if (string.IsNullOrWhiteSpace(json))
-                    {
-                        _cachedData = new InventoryData();
-                        return _cachedData;
-                    }
-
-                    var data = JsonUtility.FromJson<InventoryData>(json);
-                    _cachedData = data ?? new InventoryData();
+                    SetCache(data, ownerKey, true);
                     return _cachedData;
                 }
 
-                _cachedData = new InventoryData();
+                if (!File.Exists(encryptedPath) &&
+                    LocalUserDataPaths.TryGetLegacySharedFilePath(DataFileName, out var legacyPath) &&
+                    TryLoadFromFile(legacyPath, out data))
+                {
+                    SetCache(data, ownerKey, true);
+                    Save(_cachedData);
+                    return _cachedData;
+                }
+
+                SetCache(new InventoryData(), ownerKey, !File.Exists(encryptedPath));
                 return _cachedData;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Load inventory failed: {ex.Message}");
-                _cachedData = new InventoryData();
+                SetCache(new InventoryData(), ownerKey, false);
                 return _cachedData;
             }
         }
@@ -124,21 +128,24 @@ public static class InventoryStore
     {
         lock (FileLock)
         {
+            if (!LocalUserDataPaths.TryGetCurrentUserProgressFilePath(DataFileName, out var encryptedPath, out var ownerKey))
+            {
+                Debug.LogWarning("Save inventory skipped: 当前没有登录账号。");
+                return;
+            }
+
             try
             {
-                var folder = GetDataFolderPath();
-                if (!Directory.Exists(folder))
-                {
-                    Directory.CreateDirectory(folder);
-                }
+                LocalUserDataPaths.EnsureParentDirectory(encryptedPath);
 
-                _cachedData = data ?? new InventoryData();
+                SetCache(data ?? new InventoryData(), ownerKey, true);
                 var json = JsonUtility.ToJson(_cachedData, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                File.WriteAllBytes(encryptedPath, encrypted);
             }
             catch (Exception ex)
             {
+                _canSaveCurrent = false;
                 Debug.LogError($"Save inventory failed: {ex.Message}");
             }
         }
@@ -147,9 +154,17 @@ public static class InventoryStore
     /// <summary>
     /// 退出前强制保存当前仓库缓存。
     /// </summary>
-    public static void SaveCurrent()
+    /// <returns>缓存成功写入当前账号进度时返回 true。</returns>
+    public static bool SaveCurrent()
     {
+        if (!_canSaveCurrent || !LocalUserDataPaths.IsCurrentUserKey(_cachedOwnerKey))
+        {
+            Debug.LogWarning("Save inventory skipped: 缓存不属于当前登录账号。");
+            return false;
+        }
+
         Save(_cachedData ?? new InventoryData());
+        return _canSaveCurrent && LocalUserDataPaths.IsCurrentUserKey(_cachedOwnerKey);
     }
 
     /// <summary>
@@ -165,6 +180,11 @@ public static class InventoryStore
         lock (FileLock)
         {
             Load();
+            if (!_canSaveCurrent)
+            {
+                return;
+            }
+
             _cachedData.items ??= new List<InventoryItemData>();
             var id = itemId.Trim();
             for (var i = 0; i < _cachedData.items.Count; i++)
@@ -178,7 +198,7 @@ public static class InventoryStore
                         it.itemName = itemDisplayName.Trim();
                     }
 
-                    SaveCurrent();
+                    _ = SaveCurrent();
                     return;
                 }
             }
@@ -189,7 +209,7 @@ public static class InventoryStore
                 itemName = string.IsNullOrWhiteSpace(itemDisplayName) ? string.Empty : itemDisplayName.Trim(),
                 count = count
             });
-            SaveCurrent();
+            _ = SaveCurrent();
         }
     }
 
@@ -207,6 +227,11 @@ public static class InventoryStore
         lock (FileLock)
         {
             Load();
+            if (!_canSaveCurrent)
+            {
+                return false;
+            }
+
             _cachedData.items ??= new List<InventoryItemData>();
             var id = itemId.Trim();
             for (var i = 0; i < _cachedData.items.Count; i++)
@@ -228,8 +253,7 @@ public static class InventoryStore
                     _cachedData.items.RemoveAt(i);
                 }
 
-                SaveCurrent();
-                return true;
+                return SaveCurrent();
             }
 
             return false;
@@ -250,6 +274,11 @@ public static class InventoryStore
         lock (FileLock)
         {
             Load();
+            if (!_canSaveCurrent)
+            {
+                return false;
+            }
+
             _cachedData.items ??= new List<InventoryItemData>();
             var id = itemId.Trim();
             for (var i = 0; i < _cachedData.items.Count; i++)
@@ -258,8 +287,7 @@ public static class InventoryStore
                 if (it != null && string.Equals(it.itemId, id, StringComparison.Ordinal))
                 {
                     _cachedData.items.RemoveAt(i);
-                    SaveCurrent();
-                    return true;
+                    return SaveCurrent();
                 }
             }
 
@@ -272,17 +300,43 @@ public static class InventoryStore
     #region Private Methods
 
     /// <summary>
-    /// 获取仓库数据目录（游戏根目录/UserData）。
+    /// 尝试从指定路径读取仓库数据。
     /// </summary>
-    private static string GetDataFolderPath()
+    private static bool TryLoadFromFile(string encryptedPath, out InventoryData data)
     {
-        var dataPath = Application.dataPath;
-        var gameRootPath = Directory.GetParent(dataPath)?.FullName;
-        if (string.IsNullOrEmpty(gameRootPath)) gameRootPath = dataPath;
-        return Path.Combine(gameRootPath, DataFolderName);
+        data = null;
+        if (string.IsNullOrEmpty(encryptedPath) || !File.Exists(encryptedPath))
+        {
+            return false;
+        }
+
+        var bytes = File.ReadAllBytes(encryptedPath);
+        if (bytes == null || bytes.Length <= 16)
+        {
+            return false;
+        }
+
+        var json = LocalDataCrypto.DecryptToUtf8(bytes);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return false;
+        }
+
+        data = JsonUtility.FromJson<InventoryData>(json) ?? new InventoryData();
+        data.items ??= new List<InventoryItemData>();
+        return true;
     }
 
-    private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+    /// <summary>
+    /// 写入缓存状态与归属信息。
+    /// </summary>
+    private static void SetCache(InventoryData data, string ownerKey, bool canSave)
+    {
+        _cachedData = data ?? new InventoryData();
+        _cachedData.items ??= new List<InventoryItemData>();
+        _cachedOwnerKey = ownerKey ?? string.Empty;
+        _canSaveCurrent = canSave;
+    }
 
     #endregion
 }

@@ -98,6 +98,7 @@ public static class BuildService
         }
 
         var ids = new List<string>(count);
+        var grantedIds = new List<string>(count);
         for (var i = 0; i < count; i++)
         {
             var id = DrawOneCardId(pool);
@@ -108,7 +109,16 @@ public static class BuildService
 
             id = id.Trim();
             ids.Add(id);
-            CardCollectionStore.AddCards(id, 1);
+            if (!CardCollectionStore.AddCards(id, 1))
+            {
+                // 卡牌仓库无法写入时回滚本次已入库卡牌和资源，避免玩家付费但丢失结果。
+                RollbackGrantedCards(grantedIds);
+                CurrencyStore.Add(gold, diamond, ticket);
+                error = "卡牌仓库保存失败，建造已取消。";
+                return false;
+            }
+
+            grantedIds.Add(id);
         }
 
         if (ids.Count == 0)
@@ -202,6 +212,26 @@ public static class BuildService
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// 回滚本次建造已经写入仓库的卡牌。
+    /// </summary>
+    private static void RollbackGrantedCards(List<string> cardIds)
+    {
+        if (cardIds == null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < cardIds.Count; i++)
+        {
+            var id = cardIds[i];
+            if (!string.IsNullOrWhiteSpace(id))
+            {
+                CardCollectionStore.TryConsumeCards(id.Trim(), 1);
+            }
+        }
     }
 
     private static BuildPoolConfigSO FindPool(string poolId)
