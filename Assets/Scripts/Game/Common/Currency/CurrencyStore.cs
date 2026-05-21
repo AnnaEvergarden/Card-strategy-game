@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Game.Common.Save;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -11,11 +12,6 @@ public static class CurrencyStore
     #region Fields
 
     /// <summary>
-    /// 资源数据文件夹名。
-    /// </summary>
-    private const string DataFolderName = "UserData";
-
-    /// <summary>
     /// 加密后的资源数据文件名。
     /// </summary>
     private const string DataFileName = "currency.dat";
@@ -24,6 +20,16 @@ public static class CurrencyStore
     /// 内存缓存。
     /// </summary>
     private static CurrencyData _cached = new();
+
+    /// <summary>
+    /// 当前缓存所属账号键，用于防止切号后把旧缓存写入新账号。
+    /// </summary>
+    private static string _cachedOwnerKey = string.Empty;
+
+    /// <summary>
+    /// 当前缓存是否来自可安全保存的账号进度。
+    /// </summary>
+    private static bool _canSaveCurrent;
 
     /// <summary>
     /// 文件读写锁。
@@ -67,31 +73,36 @@ public static class CurrencyStore
     {
         lock (FileLock)
         {
+            if (!LocalUserDataPaths.TryGetCurrentUserProgressFilePath(DataFileName, out var path, out var ownerKey))
+            {
+                SetCache(CreateDefault(), string.Empty, false);
+                return _cached;
+            }
+
             try
             {
-                var path = GetEncryptedFilePath();
-                if (File.Exists(path))
+                if (TryLoadFromFile(path, out var data))
                 {
-                    var bytes = File.ReadAllBytes(path);
-                    if (bytes != null && bytes.Length > 16)
-                    {
-                        var json = LocalDataCrypto.DecryptToUtf8(bytes);
-                        if (!string.IsNullOrWhiteSpace(json))
-                        {
-                            _cached = JsonUtility.FromJson<CurrencyData>(json) ?? CreateDefault();
-                            Normalize(_cached);
-                            return _cached;
-                        }
-                    }
+                    SetCache(data, ownerKey, true);
+                    return _cached;
                 }
 
-                _cached = CreateDefault();
+                if (!File.Exists(path) &&
+                    LocalUserDataPaths.TryGetLegacySharedFilePath(DataFileName, out var legacyPath) &&
+                    TryLoadFromFile(legacyPath, out data))
+                {
+                    SetCache(data, ownerKey, true);
+                    Save(_cached);
+                    return _cached;
+                }
+
+                SetCache(CreateDefault(), ownerKey, !File.Exists(path));
                 return _cached;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Load currency failed: {ex.Message}");
-                _cached = CreateDefault();
+                SetCache(CreateDefault(), ownerKey, false);
                 return _cached;
             }
         }
@@ -104,22 +115,24 @@ public static class CurrencyStore
     {
         lock (FileLock)
         {
+            if (!LocalUserDataPaths.TryGetCurrentUserProgressFilePath(DataFileName, out var path, out var ownerKey))
+            {
+                Debug.LogWarning("Save currency skipped: 当前没有登录账号。");
+                return;
+            }
+
             try
             {
-                var folder = GetDataFolderPath();
-                if (!Directory.Exists(folder))
-                {
-                    Directory.CreateDirectory(folder);
-                }
+                LocalUserDataPaths.EnsureParentDirectory(path);
 
-                _cached = data ?? CreateDefault();
-                Normalize(_cached);
+                SetCache(data ?? CreateDefault(), ownerKey, true);
                 var json = JsonUtility.ToJson(_cached, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                File.WriteAllBytes(path, encrypted);
             }
             catch (Exception ex)
             {
+                _canSaveCurrent = false;
                 Debug.LogError($"Save currency failed: {ex.Message}");
             }
         }
@@ -128,9 +141,17 @@ public static class CurrencyStore
     /// <summary>
     /// 保存当前缓存。
     /// </summary>
-    public static void SaveCurrent()
+    /// <returns>缓存成功写入当前账号进度时返回 true。</returns>
+    public static bool SaveCurrent()
     {
+        if (!_canSaveCurrent || !LocalUserDataPaths.IsCurrentUserKey(_cachedOwnerKey))
+        {
+            Debug.LogWarning("Save currency skipped: 缓存不属于当前登录账号。");
+            return false;
+        }
+
         Save(_cached ?? CreateDefault());
+        return _canSaveCurrent && LocalUserDataPaths.IsCurrentUserKey(_cachedOwnerKey);
     }
 
     /// <summary>
@@ -146,6 +167,11 @@ public static class CurrencyStore
         lock (FileLock)
         {
             var data = Load();
+            if (!_canSaveCurrent)
+            {
+                return false;
+            }
+
             if (data.gold < gold || data.diamond < diamond || data.shipTicket < shipTicket)
             {
                 return false;
@@ -154,8 +180,7 @@ public static class CurrencyStore
             data.gold -= gold;
             data.diamond -= diamond;
             data.shipTicket -= shipTicket;
-            SaveCurrent();
-            return true;
+            return SaveCurrent();
         }
     }
 
@@ -167,6 +192,11 @@ public static class CurrencyStore
         lock (FileLock)
         {
             var data = Load();
+            if (!_canSaveCurrent)
+            {
+                return;
+            }
+
             if (gold > 0) data.gold += gold;
             if (diamond > 0) data.diamond += diamond;
             if (shipTicket > 0) data.shipTicket += shipTicket;
@@ -201,19 +231,44 @@ public static class CurrencyStore
         data.shipTicket = Mathf.Max(0, data.shipTicket);
     }
 
-    private static string GetDataFolderPath()
+    /// <summary>
+    /// 尝试从指定路径读取资源数据。
+    /// </summary>
+    private static bool TryLoadFromFile(string path, out CurrencyData data)
     {
-        var dataPath = Application.dataPath;
-        var gameRoot = Directory.GetParent(dataPath)?.FullName;
-        if (string.IsNullOrEmpty(gameRoot))
+        data = null;
+        if (string.IsNullOrEmpty(path) || !File.Exists(path))
         {
-            gameRoot = dataPath;
+            return false;
         }
 
-        return Path.Combine(gameRoot, DataFolderName);
+        var bytes = File.ReadAllBytes(path);
+        if (bytes == null || bytes.Length <= 16)
+        {
+            return false;
+        }
+
+        var json = LocalDataCrypto.DecryptToUtf8(bytes);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return false;
+        }
+
+        data = JsonUtility.FromJson<CurrencyData>(json) ?? CreateDefault();
+        Normalize(data);
+        return true;
     }
 
-    private static string GetEncryptedFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+    /// <summary>
+    /// 写入缓存状态与归属信息。
+    /// </summary>
+    private static void SetCache(CurrencyData data, string ownerKey, bool canSave)
+    {
+        _cached = data ?? CreateDefault();
+        Normalize(_cached);
+        _cachedOwnerKey = ownerKey ?? string.Empty;
+        _canSaveCurrent = canSave;
+    }
 
     #endregion
 }
