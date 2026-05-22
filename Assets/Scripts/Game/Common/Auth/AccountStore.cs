@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Game.Common.Save;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -14,16 +15,16 @@ namespace Game.Common.Auth
         #region Keys
 
         /// <summary>
-        /// 本地数据文件夹名。
-        /// </summary>
-        private const string DataFolderName = "UserData";
-
-        /// <summary>
         /// 账号数据文件名（加密二进制）。
         /// </summary>
         private const string DataFileName = "account.dat";
 
         private static readonly object FileLock = new();
+
+        /// <summary>
+        /// 最近一次读取账号库是否失败；失败时禁止用空库覆盖原文件。
+        /// </summary>
+        private static bool _dbLoadFailed;
 
         #endregion
 
@@ -134,6 +135,7 @@ namespace Game.Common.Auth
 
             db.currentUser = user;
             SaveDb(db);
+            ResetProgressCaches();
             return true;
         }
 
@@ -145,6 +147,7 @@ namespace Game.Common.Auth
             var db = LoadDb();
             db.currentUser = string.Empty;
             SaveDb(db);
+            ResetProgressCaches();
         }
 
         /// <summary>
@@ -215,20 +218,39 @@ namespace Game.Common.Auth
             lock (FileLock)
             {
                 var filePath = GetDataFilePath();
-                if (!File.Exists(filePath)) return new AccountDb();
+                if (!File.Exists(filePath))
+                {
+                    var legacyPath = GetLegacyDataFilePath();
+                    if (File.Exists(legacyPath))
+                    {
+                        filePath = legacyPath;
+                    }
+                    else
+                    {
+                        _dbLoadFailed = false;
+                        return new AccountDb();
+                    }
+                }
 
                 try
                 {
                     var encryptedBytes = File.ReadAllBytes(filePath);
-                    if (encryptedBytes == null || encryptedBytes.Length <= 16) return new AccountDb();
+                    if (encryptedBytes == null || encryptedBytes.Length <= 16)
+                    {
+                        _dbLoadFailed = true;
+                        Debug.LogError($"[AccountStore] 账号库文件异常，已阻止后续覆盖保存：{filePath}");
+                        return new AccountDb();
+                    }
 
                     var json = LocalDataCrypto.DecryptToUtf8(encryptedBytes);
                     var db = JsonUtility.FromJson<AccountDb>(json);
+                    _dbLoadFailed = false;
                     return db ?? new AccountDb();
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"Load account db failed: {ex.Message}");
+                    _dbLoadFailed = true;
+                    Debug.LogError($"[AccountStore] 读取账号库失败，已阻止后续覆盖保存：{ex.Message}");
                     return new AccountDb();
                 }
             }
@@ -243,6 +265,13 @@ namespace Game.Common.Auth
             {
                 try
                 {
+                    var filePath = GetDataFilePath();
+                    if (_dbLoadFailed && (File.Exists(filePath) || File.Exists(GetLegacyDataFilePath())))
+                    {
+                        Debug.LogError($"[AccountStore] 上次账号库读取失败，跳过保存以避免覆盖原账号库：{filePath}");
+                        return;
+                    }
+
                     var folderPath = GetDataFolderPath();
                     if (!Directory.Exists(folderPath))
                     {
@@ -251,7 +280,8 @@ namespace Game.Common.Auth
 
                     var json = JsonUtility.ToJson(db);
                     var encryptedBytes = LocalDataCrypto.EncryptUtf8(json);
-                    File.WriteAllBytes(GetDataFilePath(), encryptedBytes);
+                    File.WriteAllBytes(filePath, encryptedBytes);
+                    _dbLoadFailed = false;
                 }
                 catch (Exception ex)
                 {
@@ -276,20 +306,33 @@ namespace Game.Common.Auth
         }
 
         /// <summary>
-        /// 获取本地数据文件夹路径（游戏根目录/UserData）。
+        /// 账号切换后清空玩家进度缓存，避免旧账号缓存写入新账号目录。
         /// </summary>
-        private static string GetDataFolderPath()
+        private static void ResetProgressCaches()
         {
-            var dataPath = Application.dataPath;
-            var gameRootPath = Directory.GetParent(dataPath)?.FullName;
-            if (string.IsNullOrEmpty(gameRootPath)) gameRootPath = dataPath;
-            return Path.Combine(gameRootPath, DataFolderName);
+            global::CurrencyStore.ResetCacheForAccountChange();
+            global::InventoryStore.ResetCacheForAccountChange();
+            global::CardCollectionStore.ResetCacheForAccountChange();
+            global::FleetStore.ResetCacheForAccountChange();
         }
+
+        /// <summary>
+        /// 获取本地账号库目录（persistentDataPath/UserData）。
+        /// </summary>
+        private static string GetDataFolderPath() => LocalUserDataPaths.SharedDataFolderPath;
 
         /// <summary>
         /// 获取账号数据文件完整路径。
         /// </summary>
-        private static string GetDataFilePath() => Path.Combine(GetDataFolderPath(), DataFileName);
+        private static string GetDataFilePath() => LocalUserDataPaths.GetSharedDataFilePath(DataFileName);
+
+        /// <summary>
+        /// 获取重制版早期账号库路径，用于兼容读取旧共享账号库。
+        /// </summary>
+        private static string GetLegacyDataFilePath()
+        {
+            return Path.Combine(LocalUserDataPaths.LegacyGameRootDataFolderPath, DataFileName);
+        }
 
         #endregion
     }
