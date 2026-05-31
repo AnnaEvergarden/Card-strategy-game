@@ -13,8 +13,13 @@ public static class GameDataSaveService
     /// </summary>
     public static void SaveAll()
     {
-        // 账号数据在每次操作时已落盘，这里读取一次可触发文件校验流程。
-        _ = AccountStore.GetCurrentUser();
+        // 玩家进度必须归属于明确账号，未登录时不能写入共享默认档。
+        if (string.IsNullOrWhiteSpace(AccountStore.GetCurrentUser()))
+        {
+            Debug.LogWarning("[GameDataSaveService] 当前没有登录账号，跳过玩家进度保存。");
+            return;
+        }
+
         CurrencyStore.SaveCurrent();
         InventoryStore.SaveCurrent();
         CardCollectionStore.SaveCurrent();

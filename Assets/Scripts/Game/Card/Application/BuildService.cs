@@ -91,6 +91,14 @@ public static class BuildService
         var diamond = cost != null ? Mathf.Max(0, cost.diamond) : 0;
         var ticket = cost != null ? Mathf.Max(0, cost.shipTicket) : 0;
 
+        // 先确认卡牌仓库可写，避免扣资源成功后抽到的卡牌无法入库。
+        CardCollectionStore.Load();
+        if (!CardCollectionStore.CanSaveCurrentData())
+        {
+            error = "卡牌仓库当前不可写，已取消建造。";
+            return false;
+        }
+
         if (!CurrencyStore.TryConsume(gold, diamond, ticket))
         {
             error = "资源不足（金币/钻石/船票）。";
@@ -98,6 +106,7 @@ public static class BuildService
         }
 
         var ids = new List<string>(count);
+        var addedIds = new List<string>(count);
         for (var i = 0; i < count; i++)
         {
             var id = DrawOneCardId(pool);
@@ -108,7 +117,20 @@ public static class BuildService
 
             id = id.Trim();
             ids.Add(id);
-            CardCollectionStore.AddCards(id, 1);
+            if (CardCollectionStore.AddCards(id, 1))
+            {
+                addedIds.Add(id);
+                continue;
+            }
+
+            for (var j = 0; j < addedIds.Count; j++)
+            {
+                CardCollectionStore.TryConsumeCards(addedIds[j], 1);
+            }
+
+            CurrencyStore.Add(gold, diamond, ticket);
+            error = "卡牌仓库保存失败，已回滚本次资源消耗。";
+            return false;
         }
 
         if (ids.Count == 0)
