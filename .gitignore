@@ -97,3 +97,10 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Node.js (for code-review-unity etc.)
+node_modules/
+package-lock.json
+
+# User runtime data (personal save files)
+/UserData/
