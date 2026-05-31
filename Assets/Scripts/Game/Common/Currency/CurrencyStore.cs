@@ -116,7 +116,7 @@ public static class CurrencyStore
                 Normalize(_cached);
                 var json = JsonUtility.ToJson(_cached, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                StoreUtil.AtomicWrite(GetEncryptedFilePath(), encrypted);
             }
             catch (Exception ex)
             {

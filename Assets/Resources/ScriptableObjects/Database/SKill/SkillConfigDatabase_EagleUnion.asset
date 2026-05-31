@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b232da9abcdd62b4190abc9f97c39297, type: 3}
+  m_Name: SkillConfigDatabase_EagleUnion
+  m_EditorClassIdentifier: 
+  skills:
+  - {fileID: 11400000, guid: 099b7965272311e46a6461ef19346995, type: 2}
+  - {fileID: 11400000, guid: 1debdfb0dc80d2245b6f8c899a0cb68a, type: 2}
+  databaseFaction: 0

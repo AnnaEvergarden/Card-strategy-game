@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -25,6 +26,26 @@ public static class FleetStore
     /// 单套卡组的最大卡牌数量。
     /// </summary>
     public const int MaxCardsPerFleet = 6;
+
+    /// <summary>
+    /// 玩家可拥有的编队（卡组）套数上限（后续若调整仅改此常量）。
+    /// </summary>
+    public const int MaxFleetGroups = 6;
+
+    /// <summary>
+    /// 进入战斗时单套卡组最少舰娘数量（与 <see cref="TryValidateBattleFleetGroup"/> 一致）。
+    /// </summary>
+    public const int MinCardsPerBattleFleet = 1;
+
+    /// <summary>
+    /// 单局出战舰娘最少数量（上阵挑选面板确认逻辑一致）。
+    /// </summary>
+    public const int MinActivesPerBattleFleet = 1;
+
+    /// <summary>
+    /// 单局出战舰娘最多数量（上阵挑选面板确认逻辑一致）。
+    /// </summary>
+    public const int MaxActivesPerBattleFleet = 2;
 
     /// <summary>
     /// 内存缓存。
@@ -102,9 +123,15 @@ public static class FleetStore
                 _cached = CreateDefaultFromCollection();
                 return _cached;
             }
-            catch (Exception ex)
+            catch (IOException ex)
             {
-                Debug.LogWarning($"Load fleet data failed: {ex.Message}");
+                Debug.LogWarning($"Load fleet data failed (IO): {ex.Message}");
+                _cached = CreateDefaultFromCollection();
+                return _cached;
+            }
+            catch (CryptographicException ex)
+            {
+                Debug.LogWarning($"Load fleet data failed (crypto): {ex.Message}");
                 _cached = CreateDefaultFromCollection();
                 return _cached;
             }
@@ -130,21 +157,160 @@ public static class FleetStore
                 Normalize(_cached);
                 var json = JsonUtility.ToJson(_cached, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                StoreUtil.AtomicWrite(GetEncryptedFilePath(), encrypted);
             }
-            catch (Exception ex)
+            catch (IOException ex)
             {
-                Debug.LogError($"Save fleet data failed: {ex.Message}");
+                Debug.LogError($"Save fleet data failed (IO): {ex.Message}");
+            }
+            catch (CryptographicException ex)
+            {
+                Debug.LogError($"Save fleet data failed (crypto): {ex.Message}");
             }
         }
     }
 
     /// <summary>
-    /// 退出前保存当前缓存。
+    /// 退出前保存当前缓存；若内存为空但磁盘已有有效存档，则不覆盖（防止 Play 结束域重载后空缓存写盘）。
     /// </summary>
     public static void SaveCurrent()
     {
-        Save(_cached ?? new FleetData());
+        lock (FileLock)
+        {
+            if (ShouldSkipSaveEmptyCache())
+            {
+                return;
+            }
+
+            Save(_cached ?? new FleetData());
+        }
+    }
+    #endregion
+
+    #region Validation
+
+    /// <summary>
+    /// 校验单套卡组是否满足进入战斗的舰娘数量：至少 <see cref="MinCardsPerBattleFleet"/> 艘、至多 <see cref="MaxCardsPerFleet"/> 艘，非空 cardId 互不重复。
+    /// </summary>
+    /// <param name="group">卡组数据。</param>
+    /// <param name="failureReason">失败原因（中文短句，成功时为 null）。</param>
+    /// <returns>是否通过。</returns>
+    public static bool TryValidateBattleFleetGroup(FleetGroupData group, out string failureReason)
+    {
+        failureReason = null;
+        if (group == null)
+        {
+            failureReason = "卡组数据无效";
+            return false;
+        }
+
+        group.cardIds ??= new List<string>();
+        var seen = new HashSet<string>();
+        var count = 0;
+        for (var i = 0; i < group.cardIds.Count; i++)
+        {
+            var raw = group.cardIds[i];
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                continue;
+            }
+
+            var id = raw.Trim();
+            if (!seen.Add(id))
+            {
+                failureReason = "卡组中存在重复舰娘";
+                return false;
+            }
+
+            count++;
+        }
+
+        if (count < MinCardsPerBattleFleet)
+        {
+            failureReason = $"编队至少需要 {MinCardsPerBattleFleet} 艘舰娘（当前 {count} 艘）";
+            return false;
+        }
+
+        if (count > MaxCardsPerFleet)
+        {
+            failureReason = $"编队超过 {MaxCardsPerFleet} 艘";
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 校验本局出战舰娘列表：至少 <see cref="MinActivesPerBattleFleet"/>、至多 <see cref="MaxActivesPerBattleFleet"/> 名，且均来自所选卡组、互不重复。
+    /// </summary>
+    /// <param name="actives">出战 cardId 列表（上阵顺序）。</param>
+    /// <param name="deckCardIds">当前所选卡组 cardId 列表。</param>
+    /// <param name="failureReason">失败原因（中文短句，成功时为 null）。</param>
+    /// <returns>是否通过。</returns>
+    public static bool TryValidateBattleActives(
+        IReadOnlyList<string> actives,
+        IReadOnlyList<string> deckCardIds,
+        out string failureReason)
+    {
+        failureReason = null;
+        if (actives == null)
+        {
+            failureReason = "未选择出战舰娘";
+            return false;
+        }
+
+        var deckSet = new HashSet<string>();
+        if (deckCardIds != null)
+        {
+            for (var i = 0; i < deckCardIds.Count; i++)
+            {
+                var deckId = deckCardIds[i];
+                if (!string.IsNullOrWhiteSpace(deckId))
+                {
+                    deckSet.Add(deckId.Trim());
+                }
+            }
+        }
+
+        var seen = new HashSet<string>();
+        var count = 0;
+        for (var i = 0; i < actives.Count; i++)
+        {
+            var raw = actives[i];
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                continue;
+            }
+
+            var id = raw.Trim();
+            if (!seen.Add(id))
+            {
+                failureReason = "出战列表中存在重复舰娘";
+                return false;
+            }
+
+            if (deckSet.Count > 0 && !deckSet.Contains(id))
+            {
+                failureReason = "出战舰娘必须来自当前所选卡组";
+                return false;
+            }
+
+            count++;
+        }
+
+        if (count < MinActivesPerBattleFleet)
+        {
+            failureReason = $"请至少选择 {MinActivesPerBattleFleet} 名出战舰娘（当前 {count} 名）";
+            return false;
+        }
+
+        if (count > MaxActivesPerBattleFleet)
+        {
+            failureReason = $"出战最多选择 {MaxActivesPerBattleFleet} 名舰娘（当前 {count} 名）";
+            return false;
+        }
+
+        return true;
     }
 
     #endregion
@@ -211,6 +377,19 @@ public static class FleetStore
         }
 
         return data;
+    }
+
+    /// <summary>
+    /// 内存缓存为空且磁盘上已有有效存档时，跳过保存以免覆盖。
+    /// </summary>
+    private static bool ShouldSkipSaveEmptyCache()
+    {
+        if (_cached?.groups != null && _cached.groups.Count > 0)
+        {
+            return false;
+        }
+
+        return StoreUtil.HasValidDataOnDisk(GetEncryptedFilePath());
     }
 
     private static string GetDataFolderPath()

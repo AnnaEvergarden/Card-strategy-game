@@ -16,3 +16,8 @@ MonoBehaviour:
   stageIndexInArea: 1
   displayName: "\u5173\u53611"
   isUnlocked: 1
+  difficulty: 0
+  npcShipCardConfigs:
+  - {fileID: 11400000, guid: 853dde9a4fa77ec46bf21892b9a65069, type: 2}
+  - {fileID: 11400000, guid: 21e9d9a03fd6ff94480dcacc4cd2bafd, type: 2}
+  enemyAIProfile: {fileID: 11400000, guid: afd2a0ab6f993994d85ce04a084415ed, type: 2}

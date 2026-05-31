@@ -16,7 +16,13 @@ MonoBehaviour:
   displayName: "\u5510\u65AF"
   englishName: Downes
   shipFaction: 0
-  hp: 10
-  attack: 2
-  defence: 3
+  hp: 80
   rarity: 0
+  skillIds:
+  - 002
+  - 
+  - 
+  skillRefs:
+  - {fileID: 11400000, guid: 1debdfb0dc80d2245b6f8c899a0cb68a, type: 2}
+  - {fileID: 0}
+  - {fileID: 0}

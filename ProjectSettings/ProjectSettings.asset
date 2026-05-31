@@ -42,7 +42,7 @@ PlayerSettings:
     height: 1
   m_SplashScreenLogos: []
   m_VirtualRealitySplashScreen: {fileID: 0}
-  expectedBundleIdentifier: 
+  expectedBundleIdentifier: com.DefaultCompany.------------------
   integrityHash: 
   m_HolographicTrackingLossScreen: {fileID: 0}
   defaultScreenWidth: 1920
@@ -84,6 +84,7 @@ PlayerSettings:
   androidAutoRotationBehavior: 1
   androidUrasMode: 0
   disableBluetoothAudioUpdate: 0
+  enableURASMultiView: 0
   androidEnableSensors: 0
   androidPredictiveBackSupport: 0
   defaultIsNativeResolution: 1
@@ -153,6 +154,7 @@ PlayerSettings:
   openHarmonyRenderOutsideSafeArea: 1
   openHarmonyResizableWindow: 0
   openHarmonyEnableLowLatencyAudio: 1
+  openHarmonyLaunchAccelerationAbility: 0
   openHarmonyFullscreenMode: 1
   openHarmonyAutoRotationBehavior: 1
   openHarmonyBlitType: 0
@@ -160,6 +162,8 @@ PlayerSettings:
   openHarmonyDefaultWindowHeight: 1080
   openHarmonyMinimumWindowWidth: 400
   openHarmonyMinimumWindowHeight: 300
+  openHarmonyMaximumWindowRatio: 10
+  openHarmonyMinimumWindowRatio: 0.1
   stadiaPresentMode: 0
   stadiaTargetFramerate: 0
   vulkanNumSwapchainBuffers: 3
@@ -404,6 +408,14 @@ PlayerSettings:
     OpenHarmony: 1
     iPhone: 1
     tvOS: 1
+  m_VirtualGeometryRuntimeMap:
+    Android: 1
+    Standalone: 1
+    iPhone: 1
+  m_VirtualGeometryDataEncodingMap:
+    Android: 1
+    Standalone: 2
+    iPhone: 1
   m_BuildTargetGroupLightmapEncodingQuality:
   - m_BuildTarget: Android
     m_EncodingQuality: 1
@@ -690,7 +702,30 @@ PlayerSettings:
   webGLMemoryGeometricGrowthStep: 0.2
   webGLMemoryGeometricGrowthCap: 96
   webGLPowerPreference: 2
-  scriptingDefineSymbols: {}
+  scriptingDefineSymbols:
+    Android: DOTWEEN
+    ArmLinux: DOTWEEN
+    ArmLinuxServer: DOTWEEN
+    EmbeddedLinux: DOTWEEN
+    GameCoreScarlett: DOTWEEN
+    GameCoreXboxOne: DOTWEEN
+    HMIAndroid: DOTWEEN
+    LinuxHeadlessSimulation: DOTWEEN
+    Nintendo Switch: DOTWEEN
+    OpenHarmony: DOTWEEN
+    PS4: DOTWEEN
+    PS5: DOTWEEN
+    PlayableAds: DOTWEEN
+    QNX: DOTWEEN
+    Stadia: DOTWEEN
+    Standalone: DOTWEEN
+    VisionOS: DOTWEEN
+    WebGL: DOTWEEN
+    WeixinMiniGame: DOTWEEN
+    Windows Store Apps: DOTWEEN
+    XboxOne: DOTWEEN
+    iPhone: DOTWEEN
+    tvOS: DOTWEEN
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend: {}
@@ -860,6 +895,8 @@ PlayerSettings:
   weixinMiniGamePreserveEventDelegate: 0
   activeSubplatform: 1
   serializedFileTypeTreeMemoryOptimization: 0
+  activeHtmlChannel: -1
+  stripBuiltinResources: 0
   activeInputHandler: 0
   windowsGamepadBackendHint: 0
   cloudProjectId: 
@@ -875,6 +912,5 @@ PlayerSettings:
   androidEGLPriority: 0
   platformRequiresReadableAssets: 0
   virtualTexturingSupportEnabled: 0
-  packClustersForPlayer: 0
   insecureHttpOption: 0
   useStringInternPool: 0

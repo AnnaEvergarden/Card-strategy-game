@@ -16,7 +16,10 @@ MonoBehaviour:
   displayName: "\u62C9\u83F2"
   englishName: Laffey
   shipFaction: 0
-  hp: 10
-  attack: 2
-  defence: 3
+  hp: 80
   rarity: 2
+  skillIds: []
+  skillRefs:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}

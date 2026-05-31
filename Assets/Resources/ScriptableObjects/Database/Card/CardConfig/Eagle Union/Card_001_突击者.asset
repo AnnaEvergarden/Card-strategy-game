@@ -16,7 +16,13 @@ MonoBehaviour:
   displayName: "\u7A81\u51FB\u8005"
   englishName: Ranger
   shipFaction: 0
-  hp: 10
-  attack: 3
-  defence: 2
+  hp: 60
   rarity: 0
+  skillIds:
+  - 001
+  - 
+  - 
+  skillRefs:
+  - {fileID: 11400000, guid: 099b7965272311e46a6461ef19346995, type: 2}
+  - {fileID: 0}
+  - {fileID: 0}

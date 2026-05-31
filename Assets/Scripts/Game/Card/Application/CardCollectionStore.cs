@@ -69,12 +69,18 @@ public static class CardCollectionStore
     #region Public API
 
     /// <summary>
-    /// 读取卡牌仓库；若文件不存在则返回空列表并可写入默认测试数据（编辑器下）。
+    /// 读取卡牌仓库；无存档时返回空列表（不再注入假 card_001 数据，避免覆盖真实存档观感）。
     /// </summary>
-    public static CardCollectionData Load()
+    /// <param name="forceReload">为 true 时忽略内存缓存，强制从磁盘重读。</param>
+    public static CardCollectionData Load(bool forceReload = false)
     {
         lock (FileLock)
         {
+            if (!forceReload && _cached?.cards != null && _cached.cards.Count > 0)
+            {
+                return _cached;
+            }
+
             try
             {
                 var encryptedPath = GetEncryptedFilePath();
@@ -84,31 +90,49 @@ public static class CardCollectionStore
                     var bytes = File.ReadAllBytes(encryptedPath);
                     if (bytes == null || bytes.Length <= 16)
                     {
-                        _cached = CreateDefaultIfNeeded();
+                        Debug.LogWarning("CardCollectionStore: 存档文件过短或损坏，已按空仓库处理。");
+                        _cached = new CardCollectionData();
                         return _cached;
                     }
 
                     var json = LocalDataCrypto.DecryptToUtf8(bytes);
                     if (string.IsNullOrWhiteSpace(json))
                     {
-                        _cached = CreateDefaultIfNeeded();
+                        Debug.LogWarning("CardCollectionStore: 解密后内容为空，已按空仓库处理。");
+                        _cached = new CardCollectionData();
                         return _cached;
                     }
 
                     var data = JsonUtility.FromJson<CardCollectionData>(json);
                     _cached = data ?? new CardCollectionData();
+                    _cached.cards ??= new List<CardEntry>();
                     return _cached;
                 }
 
-                _cached = CreateDefaultIfNeeded();
+                _cached = new CardCollectionData();
                 return _cached;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Load card collection failed: {ex.Message}");
-                _cached = new CardCollectionData();
+                if (_cached == null || _cached.cards == null || _cached.cards.Count == 0)
+                {
+                    _cached = new CardCollectionData();
+                }
+
                 return _cached;
             }
+        }
+    }
+
+    /// <summary>
+    /// 清空内存缓存（下次 <see cref="Load"/> 将从磁盘读取）。
+    /// </summary>
+    public static void InvalidateCache()
+    {
+        lock (FileLock)
+        {
+            _cached = new CardCollectionData();
         }
     }
 
@@ -130,7 +154,7 @@ public static class CardCollectionStore
                 _cached = data ?? new CardCollectionData();
                 var json = JsonUtility.ToJson(_cached, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                StoreUtil.AtomicWrite(GetEncryptedFilePath(), encrypted);
             }
             catch (Exception ex)
             {
@@ -140,11 +164,19 @@ public static class CardCollectionStore
     }
 
     /// <summary>
-    /// 退出前保存当前缓存。
+    /// 退出前保存当前缓存；若内存为空但磁盘已有存档，则不覆盖（防止 Play 结束域重载后空缓存写盘）。
     /// </summary>
     public static void SaveCurrent()
     {
-        Save(_cached ?? new CardCollectionData());
+        lock (FileLock)
+        {
+            if (ShouldSkipSaveEmptyCache())
+            {
+                return;
+            }
+
+            Save(_cached ?? new CardCollectionData());
+        }
     }
 
     /// <summary>
@@ -257,18 +289,16 @@ public static class CardCollectionStore
     #region Private Methods
 
     /// <summary>
-    /// 仅在编辑器且列表为空时生成几条测试卡牌，便于查看船坞懒加载。
+    /// 内存仓库为空且磁盘上已有有效存档时，跳过保存以免覆盖。
     /// </summary>
-    private static CardCollectionData CreateDefaultIfNeeded()
+    private static bool ShouldSkipSaveEmptyCache()
     {
-        var data = new CardCollectionData();
-#if UNITY_EDITOR
-        for (var i = 1; i <= 30; i++)
+        if (_cached?.cards != null && _cached.cards.Count > 0)
         {
-            data.cards.Add(new CardEntry { cardId = $"card_{i:D3}", count = 1 });
+            return false;
         }
-#endif
-        return data;
+
+        return StoreUtil.HasValidDataOnDisk(GetEncryptedFilePath());
     }
 
     private static string GetDataFolderPath()

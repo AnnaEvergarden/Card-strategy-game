@@ -1,0 +1,684 @@
+# 卡牌游戏技能系统架构（适用于 AI 自然语言生成）
+
+## 一、整体目标
+
+构建一个：
+
+* 数据驱动
+* 高解耦
+* 可扩展
+* 支持 Buff
+* 支持 AI
+* 支持自动战斗
+* 支持网络同步
+* 支持热更新
+* 逻辑与表现分离
+
+的卡牌技能系统。
+
+系统核心思想：
+
+> “技能不是代码逻辑本身，而是多个 Effect 的配置组合。”
+
+---
+
+# 二、整体架构分层
+
+```text id="4fd3wa"
+UI层
+ ↓
+BattleFacade（战斗门面层）
+ ↓
+SkillSystem（技能系统）
+ ↓
+SkillValidator（技能合法性检查）
+ ↓
+TargetSelector（目标选择系统）
+ ↓
+SkillContext（技能上下文）
+ ↓
+SkillPipeline（技能执行流水线）
+ ↓
+SkillEffect（技能效果）
+ ↓
+Unit（角色状态）
+ ↓
+EventBus（事件总线）
+ ↓
+View表现层（动画/特效/UI）
+```
+
+---
+
+# 三、各层职责
+
+---
+
+# 1. UI层
+
+职责：
+
+* 接收玩家输入
+* 不允许包含战斗逻辑
+* 不允许直接扣血
+* 不允许直接播放技能逻辑
+
+UI只能发送：
+
+```text id="6pywdm"
+“玩家想释放某张卡牌”
+```
+
+示例：
+
+```csharp id="4hfq5w"
+BattleFacade.TryCastCard(cardId);
+```
+
+---
+
+# 2. BattleFacade（门面层）
+
+职责：
+
+* 战斗系统统一入口
+* 隔离 UI 与内部系统
+* 调度 CardSystem、SkillSystem、BuffSystem 等
+
+UI 永远不直接调用：
+
+```text id="b7yxdm"
+SkillPipeline
+Effect
+Buff
+```
+
+---
+
+# 3. CardSystem
+
+职责：
+
+* 管理卡牌配置
+* 根据 cardId 获取 CardData
+
+CardData 示例：
+
+```csharp id="gbz7pi"
+public class CardData
+{
+    public int cardId;
+
+    public string cardName;
+
+    public List<int> skillIds;
+}
+```
+
+---
+
+# 4. SkillSystem（核心调度层）
+
+职责：
+
+* 技能释放总入口
+* 技能流程控制
+* 调用：
+
+  * SkillValidator
+  * TargetSelector
+  * SkillPipeline
+
+标准入口：
+
+```csharp id="u8s5c3"
+SkillSystem.Cast(skillId, caster, target);
+```
+
+SkillSystem 不负责：
+
+```text id="y0m3ws"
+扣血
+播放特效
+播放动画
+```
+
+SkillSystem 只负责：
+
+```text id="5vzn1u"
+“调度技能释放流程”
+```
+
+---
+
+# 5. SkillValidator（合法性检查）
+
+职责：
+
+检查技能是否允许释放：
+
+* 是否死亡
+* 是否沉默
+* 是否眩晕
+* 是否蓝量足够
+* 是否 CD 中
+* 是否目标合法
+
+示例：
+
+```csharp id="ys8t50"
+SkillValidator.Validate(caster, skillData);
+```
+
+如果失败：
+
+```text id="6ft5cf"
+直接终止技能释放
+```
+
+---
+
+# 6. TargetSelector（目标选择系统）
+
+职责：
+
+统一管理技能目标规则：
+
+* 单体
+* 群体
+* 最近目标
+* 随机目标
+* 全体
+* 自己
+* 最低血量
+
+TargetSelector 使用：
+
+# Strategy Pattern（策略模式）
+
+例如：
+
+```text id="9j3jji"
+SingleTargetStrategy
+AOEStrategy
+RandomStrategy
+```
+
+---
+
+# 7. SkillContext（技能上下文）
+
+职责：
+
+统一保存技能执行时需要的数据。
+
+避免：
+
+```csharp id="wn2odv"
+Cast(a,b,c,d,e,f,g,h)
+```
+
+SkillContext 示例：
+
+```csharp id="yfjw8z"
+public class SkillContext
+{
+    public Unit Caster;
+
+    public List<Unit> Targets;
+
+    public SkillData SkillData;
+
+    public BattleContext Battle;
+
+    public bool IsCritical;
+}
+```
+
+SkillContext 是：
+
+# 技能执行期间的共享运行时数据
+
+---
+
+# 8. SkillPipeline（技能流水线）
+
+职责：
+
+按顺序执行 SkillEffect。
+
+Skill 本身：
+
+不是逻辑。
+
+Skill 只是：
+
+```text id="lhk0nq"
+Effect 的配置组合
+```
+
+例如：
+
+```text id="0m4dsm"
+火球术：
+    DamageEffect
+    BurnEffect
+```
+
+SkillPipeline 示例：
+
+```csharp id="c9f8m1"
+foreach(var effect in skill.effects)
+{
+    effect.Execute(ctx);
+}
+```
+
+---
+
+# 9. SkillEffect（真正逻辑核心）
+
+职责：
+
+执行具体行为。
+
+系统内所有技能：
+
+最终拆解为：
+
+```text id="m5cq2h"
+Damage
+Heal
+Buff
+Move
+Summon
+Shield
+```
+
+等可复用 Effect。
+
+SkillEffect 基类：
+
+```csharp id="l47w9v"
+public abstract class SkillEffect
+{
+    public abstract void Execute(SkillContext ctx);
+}
+```
+
+---
+
+# DamageEffect 示例
+
+```csharp id="f0km4j"
+public class DamageEffect : SkillEffect
+{
+    public override void Execute(SkillContext ctx)
+    {
+        foreach(var target in ctx.Targets)
+        {
+            target.TakeDamage(100);
+        }
+    }
+}
+```
+
+---
+
+# 10. Unit（角色状态层）
+
+职责：
+
+真正修改角色状态：
+
+* HP
+* MP
+* Buff
+* 死亡状态
+
+重要原则：
+
+# 谁拥有数据，谁负责发送状态变化事件。
+
+例如：
+
+HP 属于 Unit。
+
+所以：
+
+# DamageEvent 必须由 Unit 发送。
+
+---
+
+# 正确示例
+
+```csharp id="pq5oc4"
+public void TakeDamage(int value)
+{
+    hp -= value;
+
+    EventBus.Publish(
+        new DamageEvent(this, value)
+    );
+
+    if(hp <= 0)
+    {
+        Die();
+    }
+}
+```
+
+---
+
+# 错误示例
+
+错误：
+
+```csharp id="ji4s3u"
+SkillSystem 发 DamageEvent
+```
+
+因为：
+
+SkillSystem 不拥有 HP。
+
+---
+
+# 11. EventBus（事件总线）
+
+职责：
+
+解耦：
+
+```text id="ll8xmw"
+逻辑层
+与
+表现层
+```
+
+逻辑层：
+
+只发送事件。
+
+不播放动画。
+
+不播放特效。
+
+---
+
+# 事件分类
+
+---
+
+# A. 流程事件（由 SkillSystem 发）
+
+例如：
+
+```text id="gmv1cl"
+SkillCastStartEvent
+SkillCastFinishEvent
+SkillInterruptedEvent
+```
+
+这些属于：
+
+# 技能流程事件
+
+---
+
+# B. 结果事件（由 Unit 发）
+
+例如：
+
+```text id="94w4q7"
+DamageEvent
+HealEvent
+BuffAddedEvent
+DeadEvent
+```
+
+这些属于：
+
+# 状态变化事件
+
+---
+
+# 12. View表现层
+
+职责：
+
+监听 EventBus：
+
+* 播放动画
+* 播放特效
+* 飘字
+* 音效
+* 震屏
+
+View层：
+
+绝对不允许修改：
+
+```text id="q1zjlwm"
+HP
+Buff
+战斗逻辑
+```
+
+---
+
+# 四、标准技能释放调用链
+
+```text id="hrhjfd"
+UI点击卡牌
+ ↓
+BattleFacade.TryCastCard()
+ ↓
+SkillSystem.Cast()
+ ↓
+SkillValidator.Validate()
+ ↓
+EventBus.Publish(SkillCastStartEvent)
+ ↓
+TargetSelector.Select()
+ ↓
+Create SkillContext
+ ↓
+SkillPipeline.Execute()
+ ↓
+DamageEffect.Execute()
+ ↓
+Unit.TakeDamage()
+ ↓
+EventBus.Publish(DamageEvent)
+ ↓
+View层播放表现
+```
+
+---
+
+# 五、推荐文件夹结构
+
+```text id="0k5m6v"
+Game/
+ ├── UI/
+ │
+ ├── Battle/
+ │
+ │   ├── Core/
+ │   │    ├── BattleFacade
+ │   │    ├── BattleContext
+ │
+ │   ├── Cards/
+ │   │    ├── CardData
+ │   │    ├── CardSystem
+ │
+ │   ├── Skills/
+ │   │    ├── SkillData
+ │   │    ├── SkillSystem
+ │   │    ├── SkillContext
+ │   │    ├── SkillPipeline
+ │   │
+ │   │    ├── Effects/
+ │   │    │     ├── DamageEffect
+ │   │    │     ├── HealEffect
+ │   │    │     ├── BuffEffect
+ │
+ │   ├── Buffs/
+ │   ├── Events/
+ │   ├── Calculators/
+ │   ├── Targeting/
+ │   ├── Commands/
+ │   └── Managers/
+ │
+ ├── Data/
+ ├── Runtime/
+ └── Tools/
+```
+
+---
+
+# 六、涉及的专业知识
+
+该架构涉及：
+
+---
+
+# 1. 数据驱动（核心）
+
+技能 = 配置 + 通用逻辑。
+
+不是：
+
+```text id="f8h7mt"
+if(skillId == xxx)
+```
+
+---
+
+# 2. Command Pattern（命令模式）
+
+技能本质：
+
+```text id="5k33u0"
+行为命令流
+```
+
+---
+
+# 3. Facade Pattern（门面模式）
+
+BattleFacade 隔离 UI 与内部系统。
+
+---
+
+# 4. Strategy Pattern（策略模式）
+
+TargetSelector 的目标选择规则。
+
+---
+
+# 5. Context Pattern
+
+SkillContext 统一技能运行时上下文。
+
+---
+
+# 6. EventBus（事件总线）
+
+逻辑层与表现层解耦。
+
+---
+
+# 7. 数据所有权思想（重要）
+
+谁拥有数据：
+
+谁负责发送事件。
+
+例如：
+
+```text id="8n6q7p"
+HP属于Unit
+```
+
+所以：
+
+```text id="mjlwmr"
+DamageEvent由Unit发送
+```
+
+---
+
+# 七、核心设计原则（最重要）
+
+---
+
+# 原则1
+
+```text id="87h0g4"
+UI不写战斗逻辑
+```
+
+---
+
+# 原则2
+
+```text id="4rf6va"
+SkillSystem不直接修改HP
+```
+
+---
+
+# 原则3
+
+```text id="ej1nsj"
+Skill只是Effect配置
+```
+
+---
+
+# 原则4
+
+```text id="n8v4b8"
+Effect负责行为
+Unit负责状态修改
+```
+
+---
+
+# 原则5
+
+```text id="m14sc3"
+逻辑层不播放特效
+```
+
+---
+
+# 原则6
+
+```text id="l4h2m9"
+表现层不修改战斗数据
+```
+
+---
+
+# 八、最终核心思想（整个架构最关键的一句话）
+
+# 技能系统真正的核心：
+
+```text id="k4cjlwm"
+Skill = Effect Pipeline + Context
+```
+
+即：
+
+```text id="rjlwm1"
+技能 = Effect行为流水线 + 运行时上下文
+```
+
+而不是：
+
+```text id="i0fjlwm"
+一个技能类里写所有逻辑
+```

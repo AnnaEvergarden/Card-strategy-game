@@ -135,7 +135,7 @@ public static class InventoryStore
                 _cachedData = data ?? new InventoryData();
                 var json = JsonUtility.ToJson(_cachedData, true);
                 var encrypted = LocalDataCrypto.EncryptUtf8(json);
-                File.WriteAllBytes(GetEncryptedFilePath(), encrypted);
+                StoreUtil.AtomicWrite(GetEncryptedFilePath(), encrypted);
             }
             catch (Exception ex)
             {

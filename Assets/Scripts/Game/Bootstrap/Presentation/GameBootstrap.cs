@@ -51,6 +51,14 @@ public sealed class GameBootstrap : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 对象销毁时保存（编辑器停止 Play 时不一定触发 OnApplicationQuit）。
+    /// </summary>
+    private void OnDestroy()
+    {
+        GameDataSaveService.SaveAll();
+    }
+
     #endregion
 }
 

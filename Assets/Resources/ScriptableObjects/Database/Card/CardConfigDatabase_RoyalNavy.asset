@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4eece423063c114439c78c3593599e83, type: 3}
+  m_Name: CardConfigDatabase_RoyalNavy
+  m_EditorClassIdentifier: 
+  cards:
+  - {fileID: 11400000, guid: b5671fe91725776438d13e07ca362faa, type: 2}
+  databaseFaction: 1

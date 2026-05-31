@@ -1,7 +1,6 @@
 using System;
 using System.Security.Cryptography;
 using System.Text;
-using UnityEngine;
 
 namespace Game.Common.Security
 {
@@ -82,13 +81,13 @@ namespace Game.Common.Security
         #region Private Methods
 
         /// <summary>
-        /// 基于项目种子与 <see cref="UnityEngine.SystemInfo.deviceUniqueIdentifier"/> 生成 256 位 AES 密钥（SHA256）。
+        /// 基于项目种子生成 256 位 AES 密钥（SHA256）。不依赖 deviceUniqueIdentifier，
+        /// 避免 iOS 重装 / Android 厂商实现差异导致的永久数据丢失。
         /// </summary>
         /// <returns>32 字节密钥。</returns>
         private static byte[] BuildAesKey()
         {
-            var deviceId = SystemInfo.deviceUniqueIdentifier ?? "unknown-device";
-            var raw = Encoding.UTF8.GetBytes($"{KeySeed}:{deviceId}");
+            var raw = Encoding.UTF8.GetBytes(KeySeed);
             using var sha = SHA256.Create();
             return sha.ComputeHash(raw);
         }

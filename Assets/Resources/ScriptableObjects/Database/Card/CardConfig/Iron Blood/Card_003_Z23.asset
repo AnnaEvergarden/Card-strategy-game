@@ -16,7 +16,10 @@ MonoBehaviour:
   displayName: Z23
   englishName: Z23
   shipFaction: 3
-  hp: 10
-  attack: 2
-  defence: 3
+  hp: 80
   rarity: 2
+  skillIds: []
+  skillRefs:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}

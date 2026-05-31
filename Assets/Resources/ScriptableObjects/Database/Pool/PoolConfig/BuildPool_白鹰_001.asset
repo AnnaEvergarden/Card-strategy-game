@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poolId: 001
   displayName: "\u767D\u9E70"
-  poolFaction: 5
+  poolFaction: 0
   poolBannerSprite: {fileID: 0}
   buildOneCost:
     gold: 0

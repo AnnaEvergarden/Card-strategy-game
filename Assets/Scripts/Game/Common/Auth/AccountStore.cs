@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using Game.Common.Security;
 using UnityEngine;
 
@@ -38,9 +40,9 @@ namespace Game.Common.Auth
             public string user;
 
             /// <summary>
-            /// 密码。
+            /// 密码哈希（SHA256 加盐，不再存储明文）。
             /// </summary>
-            public string pass;
+            public string passHash;
         }
 
         [Serializable]
@@ -104,7 +106,7 @@ namespace Game.Common.Auth
                 return false;
             }
 
-            db.accounts.Add(new AccountEntry { user = user, pass = pass });
+            db.accounts.Add(new AccountEntry { user = user, passHash = HashPassword(pass, user) });
             SaveDb(db);
             return true;
         }
@@ -126,7 +128,7 @@ namespace Game.Common.Auth
                 return false;
             }
 
-            if (!string.Equals(entry.pass, pass, StringComparison.Ordinal))
+            if (!string.Equals(entry.passHash, HashPassword(pass, user), StringComparison.Ordinal))
             {
                 error = "密码错误";
                 return false;
@@ -251,13 +253,23 @@ namespace Game.Common.Auth
 
                     var json = JsonUtility.ToJson(db);
                     var encryptedBytes = LocalDataCrypto.EncryptUtf8(json);
-                    File.WriteAllBytes(GetDataFilePath(), encryptedBytes);
+                    StoreUtil.AtomicWrite(GetDataFilePath(), encryptedBytes);
                 }
                 catch (Exception ex)
                 {
                     Debug.LogError($"Save account db failed: {ex.Message}");
                 }
             }
+        }
+
+        /// <summary>
+        /// SHA256 加盐哈希（使用 salt + user 作盐值）；不再以明文存储密码。
+        /// </summary>
+        private static string HashPassword(string password, string user)
+        {
+            var raw = Encoding.UTF8.GetBytes($"CardGame.Auth.Salt.v1:{user}:{password ?? string.Empty}");
+            using var sha = SHA256.Create();
+            return Convert.ToBase64String(sha.ComputeHash(raw));
         }
 
         /// <summary>
