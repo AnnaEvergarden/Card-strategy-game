@@ -1,0 +1,76 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!687078895 &4343727234628468602
+SpriteAtlas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Atlas_Button
+  serializedVersion: 2
+  m_EditorData:
+    serializedVersion: 2
+    textureSettings:
+      serializedVersion: 3
+      anisoLevel: 1
+      compressionQuality: 50
+      maxTextureSize: 2048
+      textureCompression: 0
+      filterMode: 1
+      generateMipMaps: 0
+      readable: 0
+      crunchedCompression: 0
+      webStreaming: 0
+      sRGB: 1
+    platformSettings:
+    - serializedVersion: 3
+      m_BuildTarget: DefaultTexturePlatform
+      m_MaxTextureSize: 2048
+      m_MaxPlaceholderSize: 32
+      m_ResizeAlgorithm: 0
+      m_TextureFormat: -1
+      m_TextureCompression: 1
+      m_CompressionQuality: 50
+      m_CrunchedCompression: 0
+      m_AllowsAlphaSplitting: 0
+      m_Overridden: 0
+      m_IgnorePlatformSupport: 0
+      m_AndroidETC2FallbackOverride: 0
+      m_ForceMaximumCompressionQuality_BC6H_BC7: 0
+    packingSettings:
+      serializedVersion: 2
+      padding: 4
+      blockOffset: 1
+      allowAlphaSplitting: 0
+      enableRotation: 0
+      enableTightPacking: 0
+      enableAlphaDilation: 0
+    secondaryTextureSettings: {}
+    variantMultiplier: 1
+    packables:
+    - {fileID: 2800000, guid: fe076d07580d701439bfadb9d3e63624, type: 3}
+    - {fileID: 2800000, guid: 31779963e92ebd34f819f4f56d543e72, type: 3}
+    - {fileID: 2800000, guid: 8a280da0d3375554cb46ccf3d74b0155, type: 3}
+    - {fileID: 2800000, guid: bfbcc956a3cd40947ba9f962d148cfd2, type: 3}
+    - {fileID: 2800000, guid: 94f6f8aa84228be4a86fcc35dc55b442, type: 3}
+    - {fileID: 2800000, guid: 3bfd71842c5b6a2479874be1c895dec1, type: 3}
+    - {fileID: 21300000, guid: 3bfd71842c5b6a2479874be1c895dec1, type: 3}
+    - {fileID: 2800000, guid: 3435a95734445ad45b9c397253b62685, type: 3}
+    - {fileID: 2800000, guid: a8395ef567c63784499a5d26c3d99df6, type: 3}
+    - {fileID: 2800000, guid: 86f8f07b43898ce4a811c7fc07015e2d, type: 3}
+    - {fileID: 2800000, guid: 68686558c6547434f8a57511c72cb557, type: 3}
+    - {fileID: 2800000, guid: 5bde046cf2f40d24792e5cced7109f50, type: 3}
+    - {fileID: 2800000, guid: cd02a48ef880699438de59715a3872d5, type: 3}
+    - {fileID: 2800000, guid: 75a6bcfe4af3874408b10c67e897609a, type: 3}
+    - {fileID: 2800000, guid: 43b2de067ccbfc94e857194f7fc627b0, type: 3}
+    bindAsDefault: 1
+    isAtlasV2: 0
+    cachedData: {fileID: 0}
+    packedSpriteRenderDataKeys: []
+  m_MasterAtlas: {fileID: 0}
+  m_PackedSprites: []
+  m_PackedSpriteNamesToIndex: []
+  m_RenderDataMap: {}
+  m_Tag: Atlas_Button
+  m_IsVariant: 0
+  m_IsPlaceholder: 0
