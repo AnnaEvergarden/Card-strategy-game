@@ -1,0 +1,70 @@
+﻿---
+description: C# 命名规范与 Unity 社区约定
+globs: ["*.cs"]
+---
+# C# 命名规范（Microsoft Guidelines + Unity 社区约定）
+
+## 核心规则
+
+### 标识符大小写
+
+| 标识符 | 大小写 | 示例 |
+|--------|--------|------|
+| 类名 | PascalCase | `TitlePanel`, `ResourceService` |
+| 方法 | PascalCase | `OnClickLogin()`, `LoadAsync()` |
+| 属性 | PascalCase | `PanelId`, `ServiceContainer` |
+| 接口 | I + PascalCase | `IResourceService`, `IUIService` |
+| 枚举类型 | PascalCase | `PanelId`, `SceneId` |
+| 枚举值 | PascalCase | `BattleDeckSelect`, `Activity` |
+| 公共字段 | PascalCase（数据类用属性） | `public int Value` |
+| 私有字段 | `_` + camelCase | `_panelId`, `_configMap` |
+| 序列化字段 | `[SerializeField] private _camelCase` | `[SerializeField] private Button _loginButton` |
+| 参数 | camelCase | `(string username, string password)` |
+| 局部变量 | camelCase | `var result = ...` |
+| 常量 | PascalCase | `private const string DefaultAddress` |
+| readonly 字段 | `_` + camelCase | `private readonly IResourceService _resourceService` |
+
+### Unity 特殊规则
+
+- `[SerializeField] private Type _name` — Inspector 中显示为 `_name`，不暴露给外部代码
+- `[Tooltip("中文描述")]` — 配合 `[SerializeField]` 使用，在 Inspector 显示中文提示
+- 脚本类名 = 文件名 = Prefab 名（例如 `TitlePanel.cs` → `TitlePanel` 组件 → `TitlePanel.prefab`）
+
+### 禁止
+
+- ❌ `private int badName;` — 缺少 `_` 前缀
+- ❌ `public int BadField;` — 公共字段应改为属性（除非是 `[Serializable]` 数据类）
+- ❌ `OnclickLogin()` — 方法名必须 PascalCase
+- ❌ `void Load_Async()` — 不要下划线分隔，用 `LoadAsync()`
+- ❌ 不写中文 XML 注释的方法
+
+### XML 注释规范
+
+所有方法、属性、类必须有中文 XML 注释：
+
+```csharp
+/// <summary>
+/// 登录面板：提供账号密码输入、记住密码、注册与登录功能。
+/// </summary>
+public sealed class LoginPanel : PanelBase
+{
+    /// <summary>用户名输入框。</summary>
+    [SerializeField]
+    [Tooltip("用户名输入框")]
+    private TMP_InputField _usernameInput;
+}
+```
+
+### 例外：数据类
+
+`[System.Serializable]` 标记的纯数据类允许 public field（Unity JsonUtility / Inspector 序列化需要）：
+
+```csharp
+[System.Serializable]
+public class CardConfig : IConfigData
+{
+    public string Id => CardId; // 属性
+    public string CardId;       // public field（允许）
+    public string DisplayName;  // public field（允许）
+}
+```
