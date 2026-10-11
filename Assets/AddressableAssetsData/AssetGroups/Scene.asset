@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Scene
+  m_EditorClassIdentifier: 
+  m_GroupName: Scene
+  m_Data:
+    m_SerializedData: []
+  m_GUID: 886eac11e1550da44bd378213f52b45b
+  m_SerializeEntries:
+  - m_GUID: 2cda990e2423bbf4892e6590ba056729
+    m_Address: TitleScene
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - NeedResource_Config
+    - OnDemand
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3219d5f6a38e7ec4081bf1e92ef258db
+    m_Address: LobbyScene
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - NeedResource_Config
+    - OnDemand
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b4875b17b66dc2f40b2597947e6a2d00
+    m_Address: BattleScene
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - NeedResource_Config
+    - OnDemand
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: 35aa23bcacaae2e41bfa9f514c572c5e, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 3fab7546f89d3964c810da4572bd8826, type: 2}
+    - {fileID: 11400000, guid: 1adb8421e50075b448cd0e21f015b363, type: 2}

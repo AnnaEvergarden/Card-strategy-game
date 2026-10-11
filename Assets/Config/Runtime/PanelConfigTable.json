@@ -1,0 +1,94 @@
+﻿{
+    "Items": [
+        {
+            "PanelId": "ActivityPanel",
+            "ResourceId": 2601,
+            "Layer": 1,
+            "CacheOnClose": true
+        },
+        {
+            "PanelId": "BuildPanel",
+            "ResourceId": 2602,
+            "Layer": 1,
+            "CacheOnClose": true
+        },
+        {
+            "PanelId": "CardRevealPanel",
+            "ResourceId": 2603,
+            "Layer": 1,
+            "CacheOnClose": true
+        },
+        {
+            "PanelId": "FleetPanel",
+            "ResourceId": 2604,
+            "Layer": 1,
+            "CacheOnClose": true
+        },
+        {
+            "PanelId": "FleetPickPanel",
+            "ResourceId": 2605,
+            "Layer": 1,
+            "CacheOnClose": true
+        },
+        {
+            "PanelId": "InventoryPanel",
+            "ResourceId": 2606,
+            "Layer": 1,
+            "CacheOnClose": true
+        },
+        {
+            "PanelId": "LevelAreaSelectPanel",
+            "ResourceId": 2607,
+            "Layer": 1,
+            "CacheOnClose": true
+        },
+        {
+            "PanelId": "LevelSelectPanel",
+            "ResourceId": 2608,
+            "Layer": 1,
+            "CacheOnClose": true
+        },
+        {
+            "PanelId": "LevelStageSelectPanel",
+            "ResourceId": 2609,
+            "Layer": 1,
+            "CacheOnClose": true
+        },
+        {
+            "PanelId": "LobbyPanel",
+            "ResourceId": 2610,
+            "Layer": 1,
+            "CacheOnClose": true
+        },
+        {
+            "PanelId": "LoginPanel",
+            "ResourceId": 2611,
+            "Layer": 1,
+            "CacheOnClose": true
+        },
+        {
+            "PanelId": "PlayerInfoPanel",
+            "ResourceId": 2615,
+            "Layer": 1,
+            "CacheOnClose": true
+        },
+        {
+            "PanelId": "ShipgirlDetailPanel",
+            "ResourceId": 2612,
+            "Layer": 1,
+            "CacheOnClose": true
+        },
+        {
+            "PanelId": "ShipyardPanel",
+            "ResourceId": 2613,
+            "Layer": 1,
+            "CacheOnClose": true
+        },
+        {
+            "PanelId": "TitlePanel",
+            "ResourceId": 2614,
+            "Layer": 1,
+            "CacheOnClose": true
+        }
+    ]
+}

@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Prefab_Widget
+  m_EditorClassIdentifier: 
+  m_GroupName: Prefab_Widget
+  m_Data:
+    m_SerializedData: []
+  m_GUID: 2c63395a193c5db4ab6790116a8c41d0
+  m_SerializeEntries:
+  - m_GUID: 8845550c94fa6ae4b86c1b0eb2dcd029
+    m_Address: ShipyardCardSlotView
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - NeedResource_Config
+    - OnDemand
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f181d535345dddc4495615ffefcc8e81
+    m_Address: InventorySlotView
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - NeedResource_Config
+    - OnDemand
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: 35aa23bcacaae2e41bfa9f514c572c5e, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: e77d751b1fd65474eae4e5247cb7ad20, type: 2}
+    - {fileID: 11400000, guid: 3ce839428868ec44b9d13f4548ee564d, type: 2}

@@ -1,0 +1,32 @@
+﻿{
+    "Items": [
+        {
+            "PoolId": "Pool_001",
+            "DisplayName": "Default",
+            "PoolFaction": 0,
+            "BannerResourceId": 0,
+            "ButtonIconResourceId": 0,
+            "IsOpen": true,
+            "BuildOneCost": {
+                "Gold": 0,
+                "Diamond": 0,
+                "ShipTicket": 0
+            },
+            "BuildTenCost": {
+                "Gold": 0,
+                "Diamond": 0,
+                "ShipTicket": 0
+            },
+            "DropEntries": [
+                {
+                    "CardId": "Card_0001",
+                    "Weight": 1
+                },
+                {
+                    "CardId": "Card_0002",
+                    "Weight": 1
+                }
+            ]
+        }
+    ]
+}

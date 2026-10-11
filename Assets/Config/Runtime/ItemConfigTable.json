@@ -1,0 +1,11 @@
+﻿{
+    "Items": [
+        {
+            "ItemId": "Item_0001",
+            "DisplayName": "Test",
+            "Description": "null...",
+            "IconResourceId": 0,
+            "MaxStack": 64
+        }
+    ]
+}

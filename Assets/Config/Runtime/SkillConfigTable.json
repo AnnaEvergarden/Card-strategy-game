@@ -1,0 +1,31 @@
+﻿{
+    "Items": [
+        {
+            "SkillId": "Skill_0001",
+            "DisplayName": "快速起飞",
+            "Description": "null...",
+            "TargetKind": 0,
+            "Cooldown": 2,
+            "UseLimit": -1,
+            "IconResourceId": 1601,
+            "Effects": []
+        },
+        {
+            "SkillId": "Skill_0002",
+            "DisplayName": "浴火重生",
+            "Description": "null...",
+            "TargetKind": 5,
+            "Cooldown": 2,
+            "UseLimit": -1,
+            "IconResourceId": 1602,
+            "Effects": [
+                {
+                    "Kind": 2,
+                    "Value": 20,
+                    "Duration": 0,
+                    "Chance": 0.0
+                }
+            ]
+        }
+    ]
+}

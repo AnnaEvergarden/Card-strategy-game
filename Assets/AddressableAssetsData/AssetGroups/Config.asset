@@ -1,0 +1,88 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Config
+  m_EditorClassIdentifier: 
+  m_GroupName: Config
+  m_Data:
+    m_SerializedData: []
+  m_GUID: 39c58c6e1c31b5c4c95fa9ac87811b21
+  m_SerializeEntries:
+  - m_GUID: 21dfb883c2f87c843a92bf1e213bccb0
+    m_Address: LevelAreaConfigTable
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 22fc8068a63eac6459840c90562ddf0f
+    m_Address: SkillConfigTable
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2f713bfab8f284b49876e3807b650b88
+    m_Address: PanelConfigTable
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 76728ff96cb909744acd76cbc933e101
+    m_Address: CardConfigTable
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 776af1b4af08978419e05a55c39a4fc5
+    m_Address: SceneConfigTable
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: aa63a380a345b8b4c9c599f0df101c0c
+    m_Address: ItemConfigTable
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: afc19d3aea2ee7640ace860f68065dc0
+    m_Address: BuildPoolConfigTable
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: befe54bec36e61f4caec31a81368be24
+    m_Address: LevelStageConfigTable
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f6d3a6be713bcea4d91c02dacecbae68
+    m_Address: ResourceConfigTable
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: 35aa23bcacaae2e41bfa9f514c572c5e, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 38b57055c9ab3b345a938c61806eb6e0, type: 2}
+    - {fileID: 11400000, guid: ac1514994cc7236409f3fa2aeed2eec4, type: 2}

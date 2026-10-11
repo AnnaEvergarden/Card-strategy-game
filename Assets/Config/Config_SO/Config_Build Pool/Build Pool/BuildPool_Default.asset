@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1c7da90e4cc4c94ba867e2acb06e0a2, type: 3}
+  m_Name: BuildPool_Default
+  m_EditorClassIdentifier: 
+  _poolId: Pool_001
+  _displayName: Default
+  _poolFaction: 0
+  _isOpen: 1
+  _bannerResourceId: 0
+  _buttonIconResourceId: 0
+  _buildOneCost:
+    Gold: 0
+    Diamond: 0
+    ShipTicket: 0
+  _buildTenCost:
+    Gold: 0
+    Diamond: 0
+    ShipTicket: 0
+  _dropEntries:
+  - CardConfig: {fileID: 11400000, guid: a7bbf6043d8bcc1449def6e78fa5d421, type: 2}
+    CardId: Card_0001
+    Weight: 1
+  - CardConfig: {fileID: 11400000, guid: c17d987cb36cd0d4b827c7e3df99519b, type: 2}
+    CardId: Card_0002
+    Weight: 1

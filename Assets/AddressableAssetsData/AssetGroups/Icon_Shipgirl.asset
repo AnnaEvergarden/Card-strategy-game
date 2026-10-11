@@ -1,0 +1,81 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Icon_Shipgirl
+  m_EditorClassIdentifier: 
+  m_GroupName: Icon_Shipgirl
+  m_Data:
+    m_SerializedData: []
+  m_GUID: b6ef555e83282c644ba605e6a2f9b7f0
+  m_SerializeEntries:
+  - m_GUID: 37169dce324affd4ebc07b7c3307c2b6
+    m_Address: Icon_Cassin
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - NeedResource_Config
+    - OnDemand
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3e81fdb770f255d4aaf85d7934917737
+    m_Address: Icon_Downes
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - NeedResource_Config
+    - OnDemand
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6ce59dec9fbc7f24dbc22c84415df74f
+    m_Address: Icon_Bogue
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - NeedResource_Config
+    - OnDemand
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6d9fa50e0b9f25a43a8667ee3c27abc4
+    m_Address: Icon_Z23
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - NeedResource_Config
+    - OnDemand
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 78e146efd70e9b04288b38d366e92e2f
+    m_Address: Icon_Ranger
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - NeedResource_Config
+    - OnDemand
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9ce34dd1e2d90154fad344e27284c2a8
+    m_Address: Icon_Laffey
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - NeedResource_Config
+    - OnDemand
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ad1c16f53d3765644b9d5560b5c876c7
+    m_Address: Icon_Javelin
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - NeedResource_Config
+    - OnDemand
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bbe40fe2e25a88e4798dd2b30000700e
+    m_Address: Icon_Enterprise
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - NeedResource_Config
+    - OnDemand
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: 35aa23bcacaae2e41bfa9f514c572c5e, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: ee55c70a30fcc9641b8293faf338af35, type: 2}
+    - {fileID: 11400000, guid: 95db2d41ac0e38441bbaa8d7c8911a66, type: 2}

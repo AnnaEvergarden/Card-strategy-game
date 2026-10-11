@@ -1,0 +1,34 @@
+﻿{
+    "Items": [
+        {
+            "CardId": "Card_0001",
+            "DisplayName": "突击者",
+            "EnglishName": "Ranger",
+            "Faction": 1,
+            "Rarity": 0,
+            "BaseHP": 100,
+            "BaseAttack": 25,
+            "BaseDefense": 10,
+            "SkillIds": [
+                "Skill_0001"
+            ],
+            "IconResourceId": 1107,
+            "PortraitResourceId": 1107
+        },
+        {
+            "CardId": "Card_0002",
+            "DisplayName": "Z23",
+            "EnglishName": "Z23",
+            "Faction": 2,
+            "Rarity": 2,
+            "BaseHP": 120,
+            "BaseAttack": 25,
+            "BaseDefense": 12,
+            "SkillIds": [
+                "Skill_0002"
+            ],
+            "IconResourceId": 1108,
+            "PortraitResourceId": 1108
+        }
+    ]
+}

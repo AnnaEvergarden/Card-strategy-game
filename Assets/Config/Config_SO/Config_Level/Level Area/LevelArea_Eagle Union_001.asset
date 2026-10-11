@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6dfb9fbb0b23c4d41aebcb5b9b08e582, type: 3}
+  m_Name: LevelArea_Eagle Union_001
+  m_EditorClassIdentifier: 
+  _areaId: Eagle Union_001
+  _displayName: Eagle Union_001
+  _description: null...
+  _faction: 1
+  _category: 1
+  _isUnlocked: 1
+  _stages:
+  - {fileID: 11400000, guid: f40ad4702a1cb4e4cb7fff5cecfe20fc, type: 2}

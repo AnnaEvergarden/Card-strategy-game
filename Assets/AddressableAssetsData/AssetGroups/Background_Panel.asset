@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Background_Panel
+  m_EditorClassIdentifier: 
+  m_GroupName: Background_Panel
+  m_Data:
+    m_SerializedData: []
+  m_GUID: 496bfe9db73dcbe4a8500058458817bf
+  m_SerializeEntries:
+  - m_GUID: 4ccba6b4421791e4f95a1c2780ec8665
+    m_Address: BG_TitlePanel
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 62a9a02b58fd199408e4381b897238ce
+    m_Address: BG_LoginPanel
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 663120c3dd53f984b91dfa3f873888f5
+    m_Address: BG_BattleSettlementPanel
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b5ffe3acf5d42b645836f5d52345e9a1
+    m_Address: BG_BattleActivePickPanel
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cad5bac3108cd5542946d8c2127755e7
+    m_Address: BG_BattleMainPanel_2
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d2a37f5f9380d61469081b743055c907
+    m_Address: BG_SettingPanel
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ed2f2268564362a468d984f8327d8426
+    m_Address: BG_BattleMainPanel_1
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: 35aa23bcacaae2e41bfa9f514c572c5e, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 480849a409134b54b8940d0fb7f88bb5, type: 2}
+    - {fileID: 11400000, guid: d32cd913612a6254682d12497034d623, type: 2}

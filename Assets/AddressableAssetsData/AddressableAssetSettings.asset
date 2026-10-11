@@ -44,8 +44,18 @@ MonoBehaviour:
   m_BuildAddressablesWithPlayerBuild: 0
   m_overridePlayerVersion: '[UnityEditor.PlayerSettings.bundleVersion]'
   m_GroupAssets:
+  - {fileID: 11400000, guid: c276c05802ff4184ea65c4d4472f0419, type: 2}
   - {fileID: 11400000, guid: d40bb4ade9ae5af4e9ab8c0ee5945097, type: 2}
   - {fileID: 11400000, guid: 8a11ce8d190522e488610400860a9633, type: 2}
+  - {fileID: 11400000, guid: a4df1291361e0684eac16da60560805d, type: 2}
+  - {fileID: 11400000, guid: e2eb0196a131aa84695b82d42c7f39ef, type: 2}
+  - {fileID: 11400000, guid: f92d90b6689c35c43aa092a8916f5356, type: 2}
+  - {fileID: 11400000, guid: 5c8f8d49c8c8e1f448dcb03f72a1343f, type: 2}
+  - {fileID: 11400000, guid: 181464bf1475e7142812847740325108, type: 2}
+  - {fileID: 11400000, guid: 9353e86dbf0abb145816745a51d4acc5, type: 2}
+  - {fileID: 11400000, guid: 88194ed578ff6b64fa4468139417dc33, type: 2}
+  - {fileID: 11400000, guid: 4417f44393e8df441819ce611724d9ff, type: 2}
+  - {fileID: 11400000, guid: 2effd1cbeff6a3f44ad63431ed62039f, type: 2}
   m_BuildSettings:
     m_CompileScriptsInVirtualMode: 0
     m_CleanupStreamingAssetsAfterBuilds: 1
@@ -86,7 +96,10 @@ MonoBehaviour:
     m_ProfileVersion: 1
   m_LabelTable:
     m_LabelNames:
-    - default
+    - NeedResource_Config
+    - PreLoad
+    - OnDemand
+    - Essential
   m_SchemaTemplates: []
   m_GroupTemplateObjects:
   - {fileID: 11400000, guid: 23ac1fe103fe0b944a9b1aa4c8782f53, type: 2}

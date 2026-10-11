@@ -1,0 +1,25 @@
+﻿{
+    "Items": [
+        {
+            "SceneType": 2,
+            "SceneAddress": "BattleScene",
+            "IsPreload": false,
+            "NeedReleaseOldScene": false,
+            "DefaultPanelId": ""
+        },
+        {
+            "SceneType": 1,
+            "SceneAddress": "LobbyScene",
+            "IsPreload": true,
+            "NeedReleaseOldScene": false,
+            "DefaultPanelId": "LobbyPanel"
+        },
+        {
+            "SceneType": 3,
+            "SceneAddress": "TitleScene",
+            "IsPreload": false,
+            "NeedReleaseOldScene": false,
+            "DefaultPanelId": "TitlePanel"
+        }
+    ]
+}

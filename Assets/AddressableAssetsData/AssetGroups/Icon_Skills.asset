@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Icon_Skills
+  m_EditorClassIdentifier: 
+  m_GroupName: Icon_Skills
+  m_Data:
+    m_SerializedData: []
+  m_GUID: a223e60035d635047a50944e7caa5382
+  m_SerializeEntries:
+  - m_GUID: e3f9a2577ecca084cb01a2c3fa956742
+    m_Address: "Icon_\u5FEB\u901F\u8D77\u98DE"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - NeedResource_Config
+    - OnDemand
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f88a217d636836d47a95271cf4304364
+    m_Address: "Icon_\u6D74\u706B\u91CD\u751F"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - NeedResource_Config
+    - OnDemand
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: 35aa23bcacaae2e41bfa9f514c572c5e, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 77bfdf11e2969a644ac07e41bad4874c, type: 2}
+    - {fileID: 11400000, guid: 2ce9bbb3817e41644be29c83c05b531b, type: 2}

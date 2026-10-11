@@ -1,0 +1,70 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0655776ee6b4524fbd39b10297fa546, type: 3}
+  m_Name: ResourceGroupRanges
+  m_EditorClassIdentifier: 
+  Groups:
+  - GroupName: Background
+    DisplayName: Background
+    Capacity: 1000
+    Description: 
+    _sourceGroupName: 
+  - GroupName: Config
+    DisplayName: Config
+    Capacity: 100
+    Description: 
+    _sourceGroupName: 
+  - GroupName: Icon_Shipgirl
+    DisplayName: Icon Shipgirl
+    Capacity: 500
+    Description: 
+    _sourceGroupName: 
+  - GroupName: Icon_Skills
+    DisplayName: Icon Skills
+    Capacity: 1000
+    Description: 
+    _sourceGroupName: 
+  - GroupName: Prefab_Panel
+    DisplayName: Prefab Panel
+    Capacity: 100
+    Description: 
+    _sourceGroupName: 
+  - GroupName: Scene
+    DisplayName: Scene
+    Capacity: 10
+    Description: 
+    _sourceGroupName: 
+  - GroupName: Shared_UI
+    DisplayName: Shared UI
+    Capacity: 1000
+    Description: 
+    _sourceGroupName: 
+  - GroupName: Prefab_Widget
+    DisplayName: Prefab_Widget
+    Capacity: 500
+    Description: 
+    _sourceGroupName: 
+  - GroupName: Background_Panel
+    DisplayName: Background_Panel
+    Capacity: 500
+    Description: 
+    _sourceGroupName: Background_Panel
+  - GroupName: Background_Pool
+    DisplayName: Background_Pool
+    Capacity: 500
+    Description: 
+    _sourceGroupName: Background_Pool
+  - GroupName: Atlas
+    DisplayName: Atlas
+    Capacity: 100
+    Description: 
+    _sourceGroupName: 

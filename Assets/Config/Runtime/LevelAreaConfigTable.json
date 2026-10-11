@@ -1,0 +1,25 @@
+﻿{
+    "Items": [
+        {
+            "AreaId": "Eagle Union_001",
+            "DisplayName": "Eagle Union_001",
+            "Description": "null...",
+            "Faction": 1,
+            "Category": 1,
+            "IsUnlocked": true,
+            "Stages": [
+                {
+                    "StageId": "Level_001",
+                    "AreaId": "Eagle Union_001",
+                    "DisplayName": "Level_001",
+                    "StageIndexInArea": 1,
+                    "IsUnlocked": true,
+                    "EnemyCardIds": [
+                        "Card_0001",
+                        "Card_0002"
+                    ]
+                }
+            ]
+        }
+    ]
+}

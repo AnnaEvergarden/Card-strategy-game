@@ -1,0 +1,424 @@
+﻿{
+    "Items": [
+        {
+            "ResourceId": 1001,
+            "Address": "BuildPoolConfigTable",
+            "AssetType": "TextAsset",
+            "Group": "Config"
+        },
+        {
+            "ResourceId": 1002,
+            "Address": "CardConfigTable",
+            "AssetType": "TextAsset",
+            "Group": "Config"
+        },
+        {
+            "ResourceId": 1003,
+            "Address": "ItemConfigTable",
+            "AssetType": "TextAsset",
+            "Group": "Config"
+        },
+        {
+            "ResourceId": 1004,
+            "Address": "LevelAreaConfigTable",
+            "AssetType": "TextAsset",
+            "Group": "Config"
+        },
+        {
+            "ResourceId": 1005,
+            "Address": "LevelStageConfigTable",
+            "AssetType": "TextAsset",
+            "Group": "Config"
+        },
+        {
+            "ResourceId": 1006,
+            "Address": "PanelConfigTable",
+            "AssetType": "TextAsset",
+            "Group": "Config"
+        },
+        {
+            "ResourceId": 1007,
+            "Address": "SceneConfigTable",
+            "AssetType": "TextAsset",
+            "Group": "Config"
+        },
+        {
+            "ResourceId": 1008,
+            "Address": "SkillConfigTable",
+            "AssetType": "TextAsset",
+            "Group": "Config"
+        },
+        {
+            "ResourceId": 1009,
+            "Address": "ResourceConfigTable",
+            "AssetType": "TextAsset",
+            "Group": "Config"
+        },
+        {
+            "ResourceId": 1101,
+            "Address": "Icon_Bogue",
+            "AssetType": "Texture2D",
+            "Group": "Icon_Shipgirl"
+        },
+        {
+            "ResourceId": 1102,
+            "Address": "Icon_Cassin",
+            "AssetType": "Texture2D",
+            "Group": "Icon_Shipgirl"
+        },
+        {
+            "ResourceId": 1103,
+            "Address": "Icon_Downes",
+            "AssetType": "Texture2D",
+            "Group": "Icon_Shipgirl"
+        },
+        {
+            "ResourceId": 1104,
+            "Address": "Icon_Enterprise",
+            "AssetType": "Texture2D",
+            "Group": "Icon_Shipgirl"
+        },
+        {
+            "ResourceId": 1105,
+            "Address": "Icon_Javelin",
+            "AssetType": "Texture2D",
+            "Group": "Icon_Shipgirl"
+        },
+        {
+            "ResourceId": 1106,
+            "Address": "Icon_Laffey",
+            "AssetType": "Texture2D",
+            "Group": "Icon_Shipgirl"
+        },
+        {
+            "ResourceId": 1107,
+            "Address": "Icon_Ranger",
+            "AssetType": "Texture2D",
+            "Group": "Icon_Shipgirl"
+        },
+        {
+            "ResourceId": 1108,
+            "Address": "Icon_Z23",
+            "AssetType": "Texture2D",
+            "Group": "Icon_Shipgirl"
+        },
+        {
+            "ResourceId": 1601,
+            "Address": "Icon_快速起飞",
+            "AssetType": "Texture2D",
+            "Group": "Icon_Skills"
+        },
+        {
+            "ResourceId": 1602,
+            "Address": "Icon_浴火重生",
+            "AssetType": "Texture2D",
+            "Group": "Icon_Skills"
+        },
+        {
+            "ResourceId": 2601,
+            "Address": "ActivityPanel",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Panel"
+        },
+        {
+            "ResourceId": 2602,
+            "Address": "BuildPanel",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Panel"
+        },
+        {
+            "ResourceId": 2603,
+            "Address": "CardRevealPanel",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Panel"
+        },
+        {
+            "ResourceId": 2604,
+            "Address": "FleetPanel",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Panel"
+        },
+        {
+            "ResourceId": 2605,
+            "Address": "FleetPickPanel",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Panel"
+        },
+        {
+            "ResourceId": 2606,
+            "Address": "InventoryPanel",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Panel"
+        },
+        {
+            "ResourceId": 2607,
+            "Address": "LevelAreaSelectPanel",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Panel"
+        },
+        {
+            "ResourceId": 2608,
+            "Address": "LevelSelectPanel",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Panel"
+        },
+        {
+            "ResourceId": 2609,
+            "Address": "LevelStageSelectPanel",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Panel"
+        },
+        {
+            "ResourceId": 2610,
+            "Address": "LobbyPanel",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Panel"
+        },
+        {
+            "ResourceId": 2611,
+            "Address": "LoginPanel",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Panel"
+        },
+        {
+            "ResourceId": 2612,
+            "Address": "ShipgirlDetailPanel",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Panel"
+        },
+        {
+            "ResourceId": 2613,
+            "Address": "ShipyardPanel",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Panel"
+        },
+        {
+            "ResourceId": 2614,
+            "Address": "TitlePanel",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Panel"
+        },
+        {
+            "ResourceId": 2615,
+            "Address": "PlayerInfoPanel",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Panel"
+        },
+        {
+            "ResourceId": 2701,
+            "Address": "BattleScene",
+            "AssetType": "SceneAsset",
+            "Group": "Scene"
+        },
+        {
+            "ResourceId": 2702,
+            "Address": "LobbyScene",
+            "AssetType": "SceneAsset",
+            "Group": "Scene"
+        },
+        {
+            "ResourceId": 2703,
+            "Address": "TitleScene",
+            "AssetType": "SceneAsset",
+            "Group": "Scene"
+        },
+        {
+            "ResourceId": 2711,
+            "Address": "BackGround_Dark",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2712,
+            "Address": "BackGround_Light",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2713,
+            "Address": "BackGround_ScrollView",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2714,
+            "Address": "CardFrame_Card_Activity",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2715,
+            "Address": "CardFrame_Card_Elite",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2716,
+            "Address": "CardFrame_Card_None",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2717,
+            "Address": "CardFrame_Card_Normal",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2718,
+            "Address": "CardFrame_Card_Rare",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2719,
+            "Address": "CardFrame_Card_SeaLegend",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2720,
+            "Address": "CardFrame_Card_SuperRare",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2721,
+            "Address": "Icon_Button_Activity",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2722,
+            "Address": "Icon_Button_Back_1",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2723,
+            "Address": "Icon_Button_Back_2",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2724,
+            "Address": "Icon_Button_Battle",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2725,
+            "Address": "Icon_Button_BattleOption",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2726,
+            "Address": "Icon_Button_Cancel",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2727,
+            "Address": "Icon_Button_Confirm",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2728,
+            "Address": "Icon_Button_Home_1",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2729,
+            "Address": "Icon_Button_Home_2",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2730,
+            "Address": "Icon_Button_LevelSatge",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2731,
+            "Address": "Icon_Button_Next",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2732,
+            "Address": "Icon_Button_Option",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2733,
+            "Address": "Icon_Button_Previous",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 2734,
+            "Address": "Icon_Button_Title",
+            "AssetType": "Texture2D",
+            "Group": "Shared_UI"
+        },
+        {
+            "ResourceId": 3711,
+            "Address": "InventorySlotView",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Widget"
+        },
+        {
+            "ResourceId": 3712,
+            "Address": "ShipyardCardSlotView",
+            "AssetType": "GameObject",
+            "Group": "Prefab_Widget"
+        },
+        {
+            "ResourceId": 4211,
+            "Address": "BG_BattleActivePickPanel",
+            "AssetType": "Texture2D",
+            "Group": "Background_Panel"
+        },
+        {
+            "ResourceId": 4212,
+            "Address": "BG_BattleMainPanel_1",
+            "AssetType": "Texture2D",
+            "Group": "Background_Panel"
+        },
+        {
+            "ResourceId": 4213,
+            "Address": "BG_BattleMainPanel_2",
+            "AssetType": "Texture2D",
+            "Group": "Background_Panel"
+        },
+        {
+            "ResourceId": 4214,
+            "Address": "BG_BattleSettlementPanel",
+            "AssetType": "Texture2D",
+            "Group": "Background_Panel"
+        },
+        {
+            "ResourceId": 4215,
+            "Address": "BG_LoginPanel",
+            "AssetType": "Texture2D",
+            "Group": "Background_Panel"
+        },
+        {
+            "ResourceId": 4216,
+            "Address": "BG_SettingPanel",
+            "AssetType": "Texture2D",
+            "Group": "Background_Panel"
+        },
+        {
+            "ResourceId": 4217,
+            "Address": "BG_TitlePanel",
+            "AssetType": "Texture2D",
+            "Group": "Background_Panel"
+        }
+    ]
+}

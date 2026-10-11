@@ -1,0 +1,193 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Shared_UI
+  m_EditorClassIdentifier: 
+  m_GroupName: Shared_UI
+  m_Data:
+    m_SerializedData: []
+  m_GUID: 7a4a2231ef4058d4cb83f58ce3235ae6
+  m_SerializeEntries:
+  - m_GUID: 0a03f34b8f1169b4590fe3571292f717
+    m_Address: BackGround_ScrollView
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 31779963e92ebd34f819f4f56d543e72
+    m_Address: Icon_Button_Back_1
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3435a95734445ad45b9c397253b62685
+    m_Address: Icon_Button_Confirm
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3bfd71842c5b6a2479874be1c895dec1
+    m_Address: Icon_Button_Cancel
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 43b2de067ccbfc94e857194f7fc627b0
+    m_Address: Icon_Button_Title
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 450f393aff06da544b1b3c3cc040c8c9
+    m_Address: CardFrame_Card_SuperRare
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 58041d641b7c52a4a93fd0a616e4d67f
+    m_Address: BackGround_Light
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5bde046cf2f40d24792e5cced7109f50
+    m_Address: Icon_Button_Next
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 68686558c6547434f8a57511c72cb557
+    m_Address: Icon_Button_LevelSatge
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 75a6bcfe4af3874408b10c67e897609a
+    m_Address: Icon_Button_Previous
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 76cf76b24e4adf243bf3159210cbbc12
+    m_Address: CardFrame_Card_Activity
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 86f8f07b43898ce4a811c7fc07015e2d
+    m_Address: Icon_Button_Home_2
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8a280da0d3375554cb46ccf3d74b0155
+    m_Address: Icon_Button_Back_2
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 94f6f8aa84228be4a86fcc35dc55b442
+    m_Address: Icon_Button_BattleOption
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9c4e68f2b0ab9bc4b838b95987d28dd3
+    m_Address: CardFrame_Card_Elite
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9ee49057b22678349a6f39257bf608b4
+    m_Address: CardFrame_Card_SeaLegend
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a08afd243240811489066f3fce0625cf
+    m_Address: CardFrame_Card_None
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a8395ef567c63784499a5d26c3d99df6
+    m_Address: Icon_Button_Home_1
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b3a1627b193565f40b0f84ff7e4f51fa
+    m_Address: CardFrame_Card_Rare
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bc4c7ba8085004c41a7fe68a3ceb3a21
+    m_Address: CardFrame_Card_Normal
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bfbcc956a3cd40947ba9f962d148cfd2
+    m_Address: Icon_Button_Battle
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cd02a48ef880699438de59715a3872d5
+    m_Address: Icon_Button_Option
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d609215f7fc6af94491a8c385af1c62e
+    m_Address: BackGround_Dark
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fe076d07580d701439bfadb9d3e63624
+    m_Address: Icon_Button_Activity
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Essential
+    - NeedResource_Config
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: 35aa23bcacaae2e41bfa9f514c572c5e, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: a819c84cf2c55c44e853d5e204964138, type: 2}
+    - {fileID: 11400000, guid: b16eccad6f3b95e4994af5b6bcbcfd09, type: 2}
